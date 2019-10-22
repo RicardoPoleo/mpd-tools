@@ -1,18 +1,18 @@
 package io.lindstrom.mpd.data;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 
+import javax.xml.bind.annotation.XmlAttribute;
 import java.util.Objects;
 
 public class UTCTiming {
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "schemeIdUri", required = true)
     private final Type schemeIdUri;
 
-    @JacksonXmlProperty(isAttribute = true, localName = "value")
+    @XmlAttribute(name = "value")
     private final String value;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "id")
     private final String id;
 
     private UTCTiming(Type schemeIdUri, String value, String id) {
@@ -68,10 +68,6 @@ public class UTCTiming {
                 .withSchemeIdUri(schemeIdUri)
                 .withValue(value)
                 .withId(id);
-    }
-
-    public static Builder builder() {
-        return new Builder();
     }
 
     public static class Builder {

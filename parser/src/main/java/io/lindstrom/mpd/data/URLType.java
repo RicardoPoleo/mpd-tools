@@ -1,14 +1,13 @@
 package io.lindstrom.mpd.data;
 
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
-
+import javax.xml.bind.annotation.XmlAttribute;
 import java.util.Objects;
 
 public class URLType {
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "sourceURL")
     private final String sourceURL;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "range")
     private final String range;
 
     private URLType(String sourceURL, String range) {
@@ -56,10 +55,6 @@ public class URLType {
         return new Builder()
                 .withSourceURL(sourceURL)
                 .withRange(range);
-    }
-
-    public static Builder builder() {
-        return new Builder();
     }
 
     public static class Builder {

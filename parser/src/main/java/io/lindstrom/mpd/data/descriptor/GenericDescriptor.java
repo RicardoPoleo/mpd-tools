@@ -1,11 +1,10 @@
 package io.lindstrom.mpd.data.descriptor;
 
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
-
+import javax.xml.bind.annotation.XmlAttribute;
 import java.util.Objects;
 
 public class GenericDescriptor extends Descriptor {
-    @JacksonXmlProperty(isAttribute = true, localName = "value")
+    @XmlAttribute(name = "value")
     private final String value;
 
     public GenericDescriptor(String schemeIdUri, String value, String id) {
@@ -49,41 +48,5 @@ public class GenericDescriptor extends Descriptor {
                 ", schemeIdUri='" + schemeIdUri + '\'' +
                 ", id='" + id + '\'' +
                 '}';
-    }
-
-    public Builder buildUpon() {
-        return new Builder()
-                .withId(id)
-                .withSchemeIdUri(schemeIdUri)
-                .withValue(value);
-    }
-
-    public static Builder builder() {
-        return new Builder();
-    }
-
-    public static class Builder {
-        private String value;
-        private String schemeIdUri;
-        private String id;
-
-        public Builder withValue(String value) {
-            this.value = value;
-            return this;
-        }
-
-        public Builder withSchemeIdUri(String schemeIdUri) {
-            this.schemeIdUri = schemeIdUri;
-            return this;
-        }
-
-        public Builder withId(String id) {
-            this.id = id;
-            return this;
-        }
-
-        public GenericDescriptor build() {
-            return new GenericDescriptor(schemeIdUri, value, id);
-        }
     }
 }

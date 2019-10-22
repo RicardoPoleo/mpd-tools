@@ -1,27 +1,31 @@
 package io.lindstrom.mpd.data;
 
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
-
+import javax.xml.bind.annotation.XmlAttribute;
 import java.util.Objects;
+import javax.xml.bind.annotation.XmlElement;
 
 public class Event {
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "presentationTime")
     private final Long presentationTime;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "duration")
     private final Long duration;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "id")
     private final Long id;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "messageData")
     private final String messageData;
 
-    private Event(Long presentationTime, Long duration, Long id, String messageData) {
+    @XmlElement (name = "Signal")
+    private final Signal signal;
+
+    private Event(Long presentationTime, Long duration, Long id, String messageData, Signal signal) {
         this.presentationTime = presentationTime;
         this.duration = duration;
         this.id = id;
         this.messageData = messageData;
+        this.signal = signal;
     }
 
     @SuppressWarnings("unused")
@@ -30,6 +34,7 @@ public class Event {
         this.duration = null;
         this.id = null;
         this.messageData = null;
+        this.signal = null;
     }
 
     public Long getPresentationTime() {
@@ -48,30 +53,28 @@ public class Event {
         return messageData;
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Event event = (Event) o;
-        return Objects.equals(presentationTime, event.presentationTime) &&
-                Objects.equals(duration, event.duration) &&
-                Objects.equals(id, event.id) &&
-                Objects.equals(messageData, event.messageData);
+    public Signal getSignal() {
+        return signal;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(presentationTime, duration, id, messageData);
+        return super.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return super.equals(obj);
+    }
+
+    @Override
+    protected Object clone() throws CloneNotSupportedException {
+        return super.clone();
     }
 
     @Override
     public String toString() {
-        return "Event{" +
-                "presentationTime=" + presentationTime +
-                ", duration=" + duration +
-                ", id=" + id +
-                ", messageData='" + messageData + '\'' +
-                '}';
+        return super.toString();
     }
 
     public Builder buildUpon() {
@@ -79,11 +82,8 @@ public class Event {
                 .withPresentationTime(presentationTime)
                 .withDuration(duration)
                 .withId(id)
-                .withMessageData(messageData);
-    }
-
-    public static Builder builder() {
-        return new Builder();
+                .withMessageData(messageData)
+                .withSignal(signal);
     }
 
     public static class Builder {
@@ -91,6 +91,7 @@ public class Event {
         private Long duration;
         private Long id;
         private String messageData;
+        private Signal signal;
 
         public Builder withPresentationTime(Long presentationTime) {
             this.presentationTime = presentationTime;
@@ -112,8 +113,13 @@ public class Event {
             return this;
         }
 
+        public Builder withSignal(Signal signal) {
+            this.signal = signal;
+            return this;
+        }
+
         public Event build() {
-            return new Event(presentationTime, duration, id, messageData);
+            return new Event(presentationTime, duration, id, messageData, signal);
         }
     }
 }

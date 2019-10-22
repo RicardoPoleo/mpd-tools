@@ -1,16 +1,10 @@
 package io.lindstrom.mpd.data;
 
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import io.lindstrom.mpd.support.ProfilesDeserializer;
-import io.lindstrom.mpd.support.ProfilesSerializer;
 import io.lindstrom.mpd.support.Utils;
 
 import java.util.List;
 import java.util.Objects;
 
-@JsonSerialize(using = ProfilesSerializer.class)
-@JsonDeserialize(using = ProfilesDeserializer.class)
 public class Profiles {
     private final List<Profile> profiles;
     private final List<String> interoperabilityPointsAndExtensions;
@@ -59,10 +53,6 @@ public class Profiles {
         return new Builder()
                 .withProfiles(profiles)
                 .withInteroperabilityPointsAndExtensions(interoperabilityPointsAndExtensions);
-    }
-
-    public static Builder builder() {
-        return new Builder();
     }
 
     public static class Builder {

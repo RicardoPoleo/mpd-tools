@@ -1,0 +1,75 @@
+On branch master
+Your branch is up to date with 'origin/master'.
+
+Changes not staged for commit:
+  (use "git add/rm <file>..." to update what will be committed)
+  (use "git checkout -- <file>..." to discard changes in working directory)
+
+	modified:   parser/src/main/java/io/lindstrom/mpd/MPDParser.java
+	modified:   parser/src/main/java/io/lindstrom/mpd/data/ActuateType.java
+	modified:   parser/src/main/java/io/lindstrom/mpd/data/AdaptationSet.java
+	modified:   parser/src/main/java/io/lindstrom/mpd/data/BaseURL.java
+	modified:   parser/src/main/java/io/lindstrom/mpd/data/ContentComponent.java
+	modified:   parser/src/main/java/io/lindstrom/mpd/data/Event.java
+	modified:   parser/src/main/java/io/lindstrom/mpd/data/EventStream.java
+	modified:   parser/src/main/java/io/lindstrom/mpd/data/FrameRate.java
+	modified:   parser/src/main/java/io/lindstrom/mpd/data/MPD.java
+	modified:   parser/src/main/java/io/lindstrom/mpd/data/Metrics.java
+	modified:   parser/src/main/java/io/lindstrom/mpd/data/Period.java
+	modified:   parser/src/main/java/io/lindstrom/mpd/data/PresentationType.java
+	modified:   parser/src/main/java/io/lindstrom/mpd/data/Profile.java
+	modified:   parser/src/main/java/io/lindstrom/mpd/data/Profiles.java
+	modified:   parser/src/main/java/io/lindstrom/mpd/data/ProgramInformation.java
+	modified:   parser/src/main/java/io/lindstrom/mpd/data/Range.java
+	modified:   parser/src/main/java/io/lindstrom/mpd/data/Ratio.java
+	modified:   parser/src/main/java/io/lindstrom/mpd/data/Representation.java
+	modified:   parser/src/main/java/io/lindstrom/mpd/data/RepresentationBase.java
+	modified:   parser/src/main/java/io/lindstrom/mpd/data/Segment.java
+	modified:   parser/src/main/java/io/lindstrom/mpd/data/SegmentBase.java
+	modified:   parser/src/main/java/io/lindstrom/mpd/data/SegmentList.java
+	modified:   parser/src/main/java/io/lindstrom/mpd/data/SegmentTemplate.java
+	modified:   parser/src/main/java/io/lindstrom/mpd/data/SegmentURL.java
+	modified:   parser/src/main/java/io/lindstrom/mpd/data/SubRepresentation.java
+	modified:   parser/src/main/java/io/lindstrom/mpd/data/Subset.java
+	modified:   parser/src/main/java/io/lindstrom/mpd/data/URLType.java
+	modified:   parser/src/main/java/io/lindstrom/mpd/data/UTCTiming.java
+	modified:   parser/src/main/java/io/lindstrom/mpd/data/VideoScanType.java
+	modified:   parser/src/main/java/io/lindstrom/mpd/data/descriptor/Descriptor.java
+	modified:   parser/src/main/java/io/lindstrom/mpd/data/descriptor/GenericDescriptor.java
+	modified:   parser/src/main/java/io/lindstrom/mpd/data/descriptor/Role.java
+	deleted:    parser/src/main/java/io/lindstrom/mpd/data/descriptor/protection/Mp4Protection.java
+	deleted:    parser/src/main/java/io/lindstrom/mpd/data/descriptor/protection/PlayReadyContentProtection.java
+	deleted:    parser/src/main/java/io/lindstrom/mpd/data/descriptor/protection/WidewineProtection.java
+	modified:   parser/src/main/java/io/lindstrom/mpd/support/DurationDeserializer.java
+	modified:   parser/src/main/java/io/lindstrom/mpd/support/DurationSerializer.java
+	modified:   parser/src/main/java/io/lindstrom/mpd/support/FrameRateDeserializer.java
+	modified:   parser/src/main/java/io/lindstrom/mpd/support/FrameRateSerializer.java
+	modified:   parser/src/main/java/io/lindstrom/mpd/support/OffsetDateTimeDeserializer.java
+	modified:   parser/src/main/java/io/lindstrom/mpd/support/OffsetDateTimeSerializer.java
+	modified:   parser/src/main/java/io/lindstrom/mpd/support/ProfilesDeserializer.java
+	modified:   parser/src/main/java/io/lindstrom/mpd/support/ProfilesSerializer.java
+	modified:   parser/src/main/java/io/lindstrom/mpd/support/RatioDeserializer.java
+	modified:   parser/src/main/java/io/lindstrom/mpd/support/RatioSerializer.java
+	modified:   parser/src/main/java/io/lindstrom/mpd/support/Utils.java
+	deleted:    parser/src/main/java/module-info.java
+	modified:   validator/build.gradle
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+
+	.gradle/
+	.idea/
+	RicardoPoleo_MPD_Tool_Diff.txt
+	RicardoPoleo_MPD_Tools_Status.txt
+	parser/.DS_Store
+	parser/src/.DS_Store
+	parser/src/main/java/io/lindstrom/mpd/data/Binary.java
+	parser/src/main/java/io/lindstrom/mpd/data/Signal.java
+	parser/src/main/java/io/lindstrom/mpd/data/descriptor/Latency.java
+	parser/src/main/java/io/lindstrom/mpd/data/descriptor/PlaybackRate.java
+	parser/src/main/java/io/lindstrom/mpd/data/descriptor/Scope.java
+	parser/src/main/java/io/lindstrom/mpd/data/descriptor/ServiceDescription.java
+	parser/src/main/java/io/lindstrom/mpd/data/descriptor/ServiceDescriptionBuilder.java
+	parser/src/main/java/io/lindstrom/mpd/support/ParserModule.java
+
+no changes added to commit (use "git add" and/or "git commit -a")

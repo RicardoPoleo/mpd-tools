@@ -1,7 +1,6 @@
 package io.lindstrom.mpd.support;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -26,7 +25,9 @@ public class Utils {
         } else {
             List<T> list = new ArrayList<>();
             list.add(head);
-            list.addAll(Arrays.asList(tail));
+            for (T element : tail) {
+                list.add(element);
+            }
             return list;
         }
     }

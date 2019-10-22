@@ -1,14 +1,13 @@
 package io.lindstrom.mpd.data;
 
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
-
+import javax.xml.bind.annotation.XmlAttribute;
 import java.util.Objects;
 
 public class Subset {
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "contains", required = true)
     private final String contains;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "id")
     private final String id;
 
     private Subset(String contains, String id) {
@@ -56,10 +55,6 @@ public class Subset {
         return new Builder()
                 .withContains(contains)
                 .withId(id);
-    }
-
-    public static Builder builder() {
-        return new Builder();
     }
 
     public static class Builder {

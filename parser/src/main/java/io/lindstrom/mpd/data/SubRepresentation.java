@@ -1,22 +1,22 @@
 package io.lindstrom.mpd.data;
 
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 import io.lindstrom.mpd.data.descriptor.Descriptor;
 
+import javax.xml.bind.annotation.XmlAttribute;
 import java.util.List;
 import java.util.Objects;
 
 public class SubRepresentation extends RepresentationBase {
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "level")
     private final Long level;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "dependencyLevel")
     private final String dependencyLevel;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "bandwidth")
     private final Long bandwidth;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "contentComponent")
     private final String contentComponent;
 
     private SubRepresentation(List<Descriptor> framePackings, List<Descriptor> audioChannelConfigurations, List<Descriptor> contentProtections, List<Descriptor> essentialProperties, List<Descriptor> supplementalProperties, List<EventStream> inbandEventStreams, String profiles, Long width, Long height, Ratio sar, FrameRate frameRate, String audioSamplingRate, String mimeType, String segmentProfiles, String codecs, Double maximumSAPPeriod, Long startWithSAP, Double maxPlayoutRate, Boolean codingDependency, VideoScanType scanType, Long level, String dependencyLevel, Long bandwidth, String contentComponent) {
@@ -85,10 +85,6 @@ public class SubRepresentation extends RepresentationBase {
                 .withDependencyLevel(dependencyLevel)
                 .withBandwidth(bandwidth)
                 .withContentComponent(contentComponent));
-    }
-
-    public static Builder builder() {
-        return new Builder();
     }
 
     public static class Builder extends RepresentationBase.AbstractBuilder<Builder> {

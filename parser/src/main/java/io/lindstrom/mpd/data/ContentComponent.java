@@ -1,14 +1,15 @@
 package io.lindstrom.mpd.data;
 
-import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 import io.lindstrom.mpd.data.descriptor.Descriptor;
 import io.lindstrom.mpd.support.Utils;
 
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlType;
 import java.util.List;
 import java.util.Objects;
 
-@JsonPropertyOrder({
+@XmlType(propOrder = {
     "accessibility",
     "role",
     "rating",
@@ -16,28 +17,28 @@ import java.util.Objects;
     "any"
 })
 public class ContentComponent {
-    @JacksonXmlProperty(localName = "Accessibility", namespace = MPD.NAMESPACE)
+    @XmlElement(name = "Accessibility", namespace = MPD.NAMESPACE)
     private final List<Descriptor> accessibilities;
 
-    @JacksonXmlProperty(localName = "Role", namespace = MPD.NAMESPACE)
+    @XmlElement(name = "Role", namespace = MPD.NAMESPACE)
     private final List<Descriptor> roles;
 
-    @JacksonXmlProperty(localName = "Rating", namespace = MPD.NAMESPACE)
+    @XmlElement(name = "Rating", namespace = MPD.NAMESPACE)
     private final List<Descriptor> ratings;
 
-    @JacksonXmlProperty(localName = "Viewpoint", namespace = MPD.NAMESPACE)
+    @XmlElement(name = "Viewpoint", namespace = MPD.NAMESPACE)
     private final List<Descriptor> viewpoints;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "id")
     private final Long id;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "lang")
     private final String lang;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "contentType")
     private final String contentType;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "par")
     private final Ratio par;
 
     private ContentComponent(List<Descriptor> accessibilities, List<Descriptor> roles, List<Descriptor> ratings, List<Descriptor> viewpoints, Long id, String lang, String contentType, Ratio par) {
@@ -139,10 +140,6 @@ public class ContentComponent {
                 .withLang(lang)
                 .withContentType(contentType)
                 .withPar(par);
-    }
-
-    public static Builder builder() {
-        return new Builder();
     }
 
     public static class Builder {

@@ -1,30 +1,30 @@
 package io.lindstrom.mpd.data;
 
-import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
-
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlType;
 import java.util.Objects;
 
-@JsonPropertyOrder({
+@XmlType(propOrder = {
     "title",
     "source",
     "copyright",
     "any"
 })
 public class ProgramInformation {
-    @JacksonXmlProperty(localName = "Title", namespace = MPD.NAMESPACE)
+    @XmlElement(name = "Title", namespace = MPD.NAMESPACE)
     private final String title;
 
-    @JacksonXmlProperty(localName = "Source", namespace = MPD.NAMESPACE)
+    @XmlElement(name = "Source", namespace = MPD.NAMESPACE)
     private final String source;
 
-    @JacksonXmlProperty(localName = "Copyright", namespace = MPD.NAMESPACE)
+    @XmlElement(name = "Copyright", namespace = MPD.NAMESPACE)
     private final String copyright;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "lang")
     private final String lang;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "moreInformationURL")
     private final String moreInformationURL;
 
     private ProgramInformation(String title, String source, String copyright, String lang, String moreInformationURL) {
@@ -99,10 +99,6 @@ public class ProgramInformation {
                 .withCopyright(copyright)
                 .withLang(lang)
                 .withMoreInformationURL(moreInformationURL);
-    }
-
-    public static Builder builder() {
-        return new Builder();
     }
 
     public static class Builder {

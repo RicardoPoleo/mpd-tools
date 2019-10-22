@@ -3,15 +3,14 @@ package io.lindstrom.mpd.data.descriptor;
 
 import com.fasterxml.jackson.annotation.JsonEnumDefaultValue;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 
-import java.util.Locale;
+import javax.xml.bind.annotation.XmlAttribute;
 import java.util.Objects;
 
 public class Role extends Descriptor {
     static final String SCHEME_ID_URI = "urn:mpeg:dash:role:2011";
 
-    @JacksonXmlProperty(localName = "value", isAttribute = true)
+    @XmlAttribute(name = "value")
     private final Type type;
 
     public Role(Type value) {
@@ -35,7 +34,7 @@ public class Role extends Descriptor {
         if (type == null) {
             return null;
         } else {
-            return type.toString().toLowerCase(Locale.US);
+            return type.toString().toLowerCase();
         }
     }
 
@@ -75,34 +74,5 @@ public class Role extends Descriptor {
                 ", schemeIdUri='" + schemeIdUri + '\'' +
                 ", id='" + id + '\'' +
                 '}';
-    }
-
-    public Builder buildUpon() {
-        return new Builder()
-                .withId(id)
-                .withType(type);
-    }
-
-    public static Builder builder() {
-        return new Builder();
-    }
-
-    public static class Builder {
-        private Type type;
-        private String id;
-
-        public Builder withType(Type type) {
-            this.type = type;
-            return this;
-        }
-
-        public Builder withId(String id) {
-            this.id = id;
-            return this;
-        }
-
-        public Role build() {
-            return new Role(type, id);
-        }
     }
 }

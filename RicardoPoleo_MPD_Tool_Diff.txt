@@ -1,0 +1,2962 @@
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/MPDParser.java b/parser/src/main/java/io/lindstrom/mpd/MPDParser.java[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mindex 1f7faf3..907a255[m
+[1m--- a/parser/src/main/java/io/lindstrom/mpd/MPDParser.java[m
+[1m+++ b/parser/src/main/java/io/lindstrom/mpd/MPDParser.java[m
+[36m@@ -8,20 +8,22 @@[m [mimport com.fasterxml.jackson.annotation.JsonAutoDetect;[m
+ import com.fasterxml.jackson.annotation.JsonInclude;[m
+ import com.fasterxml.jackson.annotation.PropertyAccessor;[m
+ import com.fasterxml.jackson.core.JsonProcessingException;[m
+[32m+[m[32mimport com.fasterxml.jackson.databind.AnnotationIntrospector;[m
+ import com.fasterxml.jackson.databind.DeserializationFeature;[m
+ import com.fasterxml.jackson.databind.ObjectMapper;[m
+ import com.fasterxml.jackson.databind.SerializationFeature;[m
+[31m-import com.fasterxml.jackson.dataformat.xml.JacksonXmlModule;[m
+[32m+[m[32mimport com.fasterxml.jackson.databind.introspect.JacksonAnnotationIntrospector;[m
+[32m+[m[32mimport com.fasterxml.jackson.databind.type.TypeFactory;[m
+ import com.fasterxml.jackson.dataformat.xml.XmlFactory;[m
+ import com.fasterxml.jackson.dataformat.xml.XmlMapper;[m
+[32m+[m[32mimport com.fasterxml.jackson.module.jaxb.JaxbAnnotationIntrospector;[m
+ import io.lindstrom.mpd.data.MPD;[m
+[31m-import io.lindstrom.mpd.support.*;[m
+[32m+[m[32mimport io.lindstrom.mpd.support.ParserModule;[m
+ import org.codehaus.stax2.XMLStreamWriter2;[m
+ [m
+[32m+[m[32mimport javax.xml.stream.XMLStreamException;[m
+ import java.io.IOException;[m
+ import java.io.InputStream;[m
+[31m-import java.time.Duration;[m
+[31m-import java.time.OffsetDateTime;[m
+ [m
+ public class MPDParser {[m
+ [m
+[36m@@ -52,20 +54,16 @@[m [mpublic class MPDParser {[m
+     }[m
+ [m
+     public static ObjectMapper defaultObjectMapper() {[m
+[31m-        JacksonXmlModule module = new JacksonXmlModule();[m
+[31m-        module.setDefaultUseWrapper(false);[m
+[31m-        module.addSerializer(OffsetDateTime.class, new OffsetDateTimeSerializer())[m
+[31m-                .addDeserializer(OffsetDateTime.class, new OffsetDateTimeDeserializer())[m
+[31m-                .addSerializer(Duration.class, new DurationSerializer())[m
+[31m-                .addDeserializer(Duration.class, new DurationDeserializer());[m
+[31m-[m
+[31m-        return new XmlMapper(new XmlFactory(new WstxInputFactory(), new WstxPrefixedOutputFactory()), module)[m
+[32m+[m[32m        return new XmlMapper(new XmlFactory(new WstxInputFactory(), new WstxPrefixedOutputFactory()))[m
+                 .enable(SerializationFeature.INDENT_OUTPUT)[m
+                 .setSerializationInclusion(JsonInclude.Include.NON_NULL)[m
+                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true)[m
+                 .configure(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_USING_DEFAULT_VALUE, true)[m
+                 .setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY)[m
+[31m-                .setVisibility(PropertyAccessor.GETTER, JsonAutoDetect.Visibility.NONE);[m
+[32m+[m[32m                .registerModule(new ParserModule())[m
+[32m+[m[32m                .setAnnotationIntrospector(AnnotationIntrospector.pair([m
+[32m+[m[32m                        new JaxbAnnotationIntrospector(TypeFactory.defaultInstance()),[m
+[32m+[m[32m                        new JacksonAnnotationIntrospector()));[m
+     }[m
+ [m
+     private static class WstxPrefixedOutputFactory extends WstxOutputFactory {[m
+[36m@@ -75,9 +73,7 @@[m [mpublic class MPDParser {[m
+             try {[m
+                 streamWriter.setPrefix("xsi", "http://www.w3.org/2001/XMLSchema-instance");[m
+                 streamWriter.setPrefix("xlink", "http://www.w3.org/1999/xlink");[m
+[31m-                streamWriter.setPrefix("cenc", "urn:mpeg:cenc:2013");[m
+[31m-                streamWriter.setPrefix("mspr", "urn:microsoft:playready");[m
+[31m-            } catch (Exception e) {[m
+[32m+[m[32m            } catch (XMLStreamException e) {[m
+                 throw new RuntimeException(e);[m
+             }[m
+             return streamWriter;[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/data/ActuateType.java b/parser/src/main/java/io/lindstrom/mpd/data/ActuateType.java[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/data/AdaptationSet.java b/parser/src/main/java/io/lindstrom/mpd/data/AdaptationSet.java[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mindex b6e5a14..3f277fe[m
+[1m--- a/parser/src/main/java/io/lindstrom/mpd/data/AdaptationSet.java[m
+[1m+++ b/parser/src/main/java/io/lindstrom/mpd/data/AdaptationSet.java[m
+[36m@@ -1,16 +1,17 @@[m
+ package io.lindstrom.mpd.data;[m
+ [m
+[31m-import com.fasterxml.jackson.annotation.JsonPropertyOrder;[m
+[31m-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;[m
+ import io.lindstrom.mpd.data.descriptor.Descriptor;[m
+ import io.lindstrom.mpd.data.descriptor.Role;[m
+ import io.lindstrom.mpd.support.Utils;[m
+ [m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlAttribute;[m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlElement;[m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlType;[m
+ import java.util.List;[m
+ import java.util.Objects;[m
+ import java.util.stream.Collectors;[m
+ [m
+[31m-@JsonPropertyOrder({[m
+[32m+[m[32m@XmlType(propOrder = {[m
+         "id",[m
+         "contentType",[m
+         "mimeType",[m
+[36m@@ -34,91 +35,91 @@[m [mimport java.util.stream.Collectors;[m
+         "representations"[m
+ })[m
+ public class AdaptationSet extends RepresentationBase {[m
+[31m-    @JacksonXmlProperty(localName = "Accessibility", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "Accessibility", namespace = MPD.NAMESPACE)[m
+     private final List<Descriptor> accessibilities;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "Role", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "Role", namespace = MPD.NAMESPACE)[m
+     private final List<Descriptor> roles;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "Rating", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "Rating", namespace = MPD.NAMESPACE)[m
+     private final List<Descriptor> ratings;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "Viewpoint", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "Viewpoint", namespace = MPD.NAMESPACE)[m
+     private final List<Descriptor> viewpoints;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "ContentComponent", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "ContentComponent", namespace = MPD.NAMESPACE)[m
+     private final List<ContentComponent> contentComponents;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "BaseURL", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "BaseURL", namespace = MPD.NAMESPACE)[m
+     private final List<BaseURL> baseURLs;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "SegmentBase", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "SegmentBase", namespace = MPD.NAMESPACE)[m
+     private final SegmentBase segmentBase;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "SegmentList", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "SegmentList", namespace = MPD.NAMESPACE)[m
+     private final SegmentList segmentList;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "SegmentTemplate", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "SegmentTemplate", namespace = MPD.NAMESPACE)[m
+     private final SegmentTemplate segmentTemplate;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "Representation", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "Representation", namespace = MPD.NAMESPACE)[m
+     private final List<Representation> representations;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true, namespace = "http://www.w3.org/1999/xlink")[m
+[32m+[m[32m    @XmlAttribute(name = "href", namespace = "http://www.w3.org/1999/xlink")[m
+     private final String href;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true,  namespace = "http://www.w3.org/1999/xlink")[m
+[32m+[m[32m    @XmlAttribute(name = "actuate", namespace = "http://www.w3.org/1999/xlink")[m
+     private final ActuateType actuate;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "id")[m
+     private final Long id;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "group")[m
+     private final Long group;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "lang")[m
+     private final String lang;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "contentType")[m
+     private final String contentType;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "par")[m
+     private final Ratio par;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "minBandwidth")[m
+     private final Long minBandwidth;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "maxBandwidth")[m
+     private final Long maxBandwidth;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "minWidth")[m
+     private final Long minWidth;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "maxWidth")[m
+     private final Long maxWidth;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "minHeight")[m
+     private final Long minHeight;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "maxHeight")[m
+     private final Long maxHeight;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "minFrameRate")[m
+     private final FrameRate minFrameRate;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "maxFrameRate")[m
+     private final FrameRate maxFrameRate;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "segmentAlignment")[m
+     private final String segmentAlignment;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "subsegmentAlignment")[m
+     private final String subsegmentAlignment;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "subsegmentStartsWithSAP")[m
+     private final Long subsegmentStartsWithSAP;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "bitstreamSwitching")[m
+     private final Boolean bitstreamSwitching;[m
+ [m
+     private AdaptationSet(List<Descriptor> framePackings, List<Descriptor> audioChannelConfigurations, List<Descriptor> contentProtections, List<Descriptor> essentialProperties, List<Descriptor> supplementalProperties, List<EventStream> inbandEventStreams, String profiles, Long width, Long height, Ratio sar, FrameRate frameRate, String audioSamplingRate, String mimeType, String segmentProfiles, String codecs, Double maximumSAPPeriod, Long startWithSAP, Double maxPlayoutRate, Boolean codingDependency, VideoScanType scanType, List<Descriptor> accessibilities, List<Descriptor> roles, List<Descriptor> ratings, List<Descriptor> viewpoints, List<ContentComponent> contentComponents, List<BaseURL> baseURLs, SegmentBase segmentBase, SegmentList segmentList, SegmentTemplate segmentTemplate, List<Representation> representations, String href, ActuateType actuate, Long id, Long group, String lang, String contentType, Ratio par, Long minBandwidth, Long maxBandwidth, Long minWidth, Long maxWidth, Long minHeight, Long maxHeight, FrameRate minFrameRate, FrameRate maxFrameRate, String segmentAlignment, String subsegmentAlignment, Long subsegmentStartsWithSAP, Boolean bitstreamSwitching) {[m
+[36m@@ -414,10 +415,6 @@[m [mpublic class AdaptationSet extends RepresentationBase {[m
+                 .withBitstreamSwitching(bitstreamSwitching));[m
+     }[m
+ [m
+[31m-    public static Builder builder() {[m
+[31m-        return new Builder();[m
+[31m-    }[m
+[31m-[m
+     public static class Builder extends AbstractBuilder<Builder> {[m
+         private List<Descriptor> accessibilities;[m
+         private List<Descriptor> roles;[m
+[36m@@ -622,13 +619,7 @@[m [mpublic class AdaptationSet extends RepresentationBase {[m
+         }[m
+ [m
+         public AdaptationSet build() {[m
+[31m-            return new AdaptationSet(framePackings, audioChannelConfigurations, contentProtections, essentialProperties,[m
+[31m-                    supplementalProperties, inbandEventStreams, profiles, width, height, sar, frameRate, audioSamplingRate,[m
+[31m-                    mimeType, segmentProfiles, codecs, maximumSAPPeriod, startWithSAP, maxPlayoutRate, codingDependency,[m
+[31m-                    scanType, accessibilities, roles, ratings, viewpoints, contentComponents, baseURLs, segmentBase,[m
+[31m-                    segmentList, segmentTemplate, representations, href, actuate, id, group, lang, contentType, par,[m
+[31m-                    minBandwidth, maxBandwidth, minWidth, maxWidth, minHeight, maxHeight, minFrameRate, maxFrameRate,[m
+[31m-                    segmentAlignment, subsegmentAlignment, subsegmentStartsWithSAP, bitstreamSwitching);[m
+[32m+[m[32m            return new AdaptationSet(framePackings, audioChannelConfigurations, contentProtections, essentialProperties, supplementalProperties, inbandEventStreams, profiles, width, height, sar, frameRate, audioSamplingRate, mimeType, segmentProfiles, codecs, maximumSAPPeriod, startWithSAP, maxPlayoutRate, codingDependency, scanType, accessibilities, roles, ratings, viewpoints, contentComponents, baseURLs, segmentBase, segmentList, segmentTemplate, representations, href, actuate, id, group, lang, contentType, par, minBandwidth, maxBandwidth, minWidth, maxWidth, minHeight, maxHeight, minFrameRate, maxFrameRate, segmentAlignment, subsegmentAlignment, subsegmentStartsWithSAP, bitstreamSwitching);[m
+         }[m
+     }[m
+ }[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/data/BaseURL.java b/parser/src/main/java/io/lindstrom/mpd/data/BaseURL.java[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mindex 7a48598..2e762ee[m
+[1m--- a/parser/src/main/java/io/lindstrom/mpd/data/BaseURL.java[m
+[1m+++ b/parser/src/main/java/io/lindstrom/mpd/data/BaseURL.java[m
+[36m@@ -1,26 +1,31 @@[m
+ package io.lindstrom.mpd.data;[m
+ [m
+[31m-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;[m
+[31m-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlText;[m
+[31m-[m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlAttribute;[m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlValue;[m
+ import java.util.Objects;[m
+ [m
+ public class BaseURL {[m
+[31m-    @JacksonXmlText[m
+[32m+[m[32m    @XmlValue[m
+     private final String value;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "serviceLocation")[m
+     private final String serviceLocation;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "byteRange")[m
+     private final String byteRange;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "availabilityTimeOffset")[m
+     private final Double availabilityTimeOffset;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "availabilityTimeComplete")[m
+     private final Boolean availabilityTimeComplete;[m
+ [m
+[32m+[m[32m    @XmlAttribute(name = "priority")[m
+[32m+[m[32m    private final int priority;[m
+[32m+[m
+[32m+[m[32m    @XmlAttribute(name= "weight")[m
+[32m+[m[32m    private final int weight;[m
+[32m+[m
+     @SuppressWarnings("unused")[m
+     private BaseURL() {[m
+         this.value = null;[m
+[36m@@ -28,6 +33,8 @@[m [mpublic class BaseURL {[m
+         this.byteRange = null;[m
+         this.availabilityTimeOffset = null;[m
+         this.availabilityTimeComplete = null;[m
+[32m+[m[32m        this.priority = 1;[m
+[32m+[m[32m        this.weight = 1;[m
+     }[m
+ [m
+     @SuppressWarnings("unused")[m
+[36m@@ -37,14 +44,26 @@[m [mpublic class BaseURL {[m
+         this.byteRange = null;[m
+         this.availabilityTimeOffset = null;[m
+         this.availabilityTimeComplete = null;[m
+[32m+[m[32m        this.priority = 1;[m
+[32m+[m[32m        this.weight = 1;[m
+     }[m
+ [m
+[31m-    private BaseURL(String value, String serviceLocation, String byteRange, Double availabilityTimeOffset, Boolean availabilityTimeComplete) {[m
+[32m+[m[32m    private BaseURL(String value, String serviceLocation, String byteRange, Double availabilityTimeOffset, Boolean availabilityTimeComplete, int priority, int weight) {[m
+         this.value = value;[m
+         this.serviceLocation = serviceLocation;[m
+         this.byteRange = byteRange;[m
+         this.availabilityTimeOffset = availabilityTimeOffset;[m
+         this.availabilityTimeComplete = availabilityTimeComplete;[m
+[32m+[m[32m        this.priority = priority;[m
+[32m+[m[32m        this.weight = weight;[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    public int getWeight() {[m
+[32m+[m[32m        return weight;[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    public int getPriority() {[m
+[32m+[m[32m        return priority;[m
+     }[m
+ [m
+     public String getValue() {[m
+[36m@@ -92,6 +111,8 @@[m [mpublic class BaseURL {[m
+                 ", byteRange='" + byteRange + '\'' +[m
+                 ", availabilityTimeOffset=" + availabilityTimeOffset +[m
+                 ", availabilityTimeComplete=" + availabilityTimeComplete +[m
+[32m+[m[32m                ", priority=" + priority +[m
+[32m+[m[32m                ", weight=" + weight +[m
+                 '}';[m
+     }[m
+ [m
+[36m@@ -101,11 +122,8 @@[m [mpublic class BaseURL {[m
+                 .withServiceLocation(serviceLocation)[m
+                 .withByteRange(byteRange)[m
+                 .withAvailabilityTimeOffset(availabilityTimeOffset)[m
+[31m-                .withAvailabilityTimeComplete(availabilityTimeComplete);[m
+[31m-    }[m
+[31m-[m
+[31m-    public static Builder builder() {[m
+[31m-        return new Builder();[m
+[32m+[m[32m                .withAvailabilityTimeComplete(availabilityTimeComplete)[m
+[32m+[m[32m                .withPriority(priority);[m
+     }[m
+ [m
+     public static class Builder {[m
+[36m@@ -114,34 +132,46 @@[m [mpublic class BaseURL {[m
+         private String byteRange;[m
+         private Double availabilityTimeOffset;[m
+         private Boolean availabilityTimeComplete;[m
+[32m+[m[32m        private int priority;[m
+[32m+[m[32m        private int weight;[m
+ [m
+[31m-        public Builder withValue(String value) {[m
+[32m+[m[32m        private Builder withValue(String value) {[m
+             this.value = value;[m
+             return this;[m
+         }[m
+ [m
+[31m-        public Builder withServiceLocation(String serviceLocation) {[m
+[32m+[m[32m        private Builder withServiceLocation(String serviceLocation) {[m
+             this.serviceLocation = serviceLocation;[m
+             return this;[m
+         }[m
+ [m
+[31m-        public Builder withByteRange(String byteRange) {[m
+[32m+[m[32m        private Builder withByteRange(String byteRange) {[m
+             this.byteRange = byteRange;[m
+             return this;[m
+         }[m
+ [m
+[31m-        public Builder withAvailabilityTimeOffset(Double availabilityTimeOffset) {[m
+[32m+[m[32m        private Builder withAvailabilityTimeOffset(Double availabilityTimeOffset) {[m
+             this.availabilityTimeOffset = availabilityTimeOffset;[m
+             return this;[m
+         }[m
+ [m
+[31m-        public Builder withAvailabilityTimeComplete(Boolean availabilityTimeComplete) {[m
+[32m+[m[32m        private Builder withAvailabilityTimeComplete(Boolean availabilityTimeComplete) {[m
+             this.availabilityTimeComplete = availabilityTimeComplete;[m
+             return this;[m
+         }[m
+ [m
+[32m+[m[32m        private Builder withPriority(int priority) {[m
+[32m+[m[32m            this.priority = priority;[m
+[32m+[m[32m            return this;[m
+[32m+[m[32m        }[m
+[32m+[m
+[32m+[m[32m        private Builder withWeight(int weight) {[m
+[32m+[m[32m            this.weight = weight;[m
+[32m+[m[32m            return this;[m
+[32m+[m[32m        }[m
+[32m+[m
+         public BaseURL build() {[m
+[31m-            return new BaseURL(value, serviceLocation, byteRange, availabilityTimeOffset, availabilityTimeComplete);[m
+[32m+[m[32m            return new BaseURL(value, serviceLocation, byteRange, availabilityTimeOffset, availabilityTimeComplete, priority, weight);[m
+         }[m
+     }[m
+ }[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/data/ContentComponent.java b/parser/src/main/java/io/lindstrom/mpd/data/ContentComponent.java[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mindex 5a38171..a18ba0b[m
+[1m--- a/parser/src/main/java/io/lindstrom/mpd/data/ContentComponent.java[m
+[1m+++ b/parser/src/main/java/io/lindstrom/mpd/data/ContentComponent.java[m
+[36m@@ -1,14 +1,15 @@[m
+ package io.lindstrom.mpd.data;[m
+ [m
+[31m-import com.fasterxml.jackson.annotation.JsonPropertyOrder;[m
+[31m-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;[m
+ import io.lindstrom.mpd.data.descriptor.Descriptor;[m
+ import io.lindstrom.mpd.support.Utils;[m
+ [m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlAttribute;[m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlElement;[m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlType;[m
+ import java.util.List;[m
+ import java.util.Objects;[m
+ [m
+[31m-@JsonPropertyOrder({[m
+[32m+[m[32m@XmlType(propOrder = {[m
+     "accessibility",[m
+     "role",[m
+     "rating",[m
+[36m@@ -16,28 +17,28 @@[m [mimport java.util.Objects;[m
+     "any"[m
+ })[m
+ public class ContentComponent {[m
+[31m-    @JacksonXmlProperty(localName = "Accessibility", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "Accessibility", namespace = MPD.NAMESPACE)[m
+     private final List<Descriptor> accessibilities;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "Role", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "Role", namespace = MPD.NAMESPACE)[m
+     private final List<Descriptor> roles;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "Rating", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "Rating", namespace = MPD.NAMESPACE)[m
+     private final List<Descriptor> ratings;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "Viewpoint", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "Viewpoint", namespace = MPD.NAMESPACE)[m
+     private final List<Descriptor> viewpoints;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "id")[m
+     private final Long id;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "lang")[m
+     private final String lang;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "contentType")[m
+     private final String contentType;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "par")[m
+     private final Ratio par;[m
+ [m
+     private ContentComponent(List<Descriptor> accessibilities, List<Descriptor> roles, List<Descriptor> ratings, List<Descriptor> viewpoints, Long id, String lang, String contentType, Ratio par) {[m
+[36m@@ -141,10 +142,6 @@[m [mpublic class ContentComponent {[m
+                 .withPar(par);[m
+     }[m
+ [m
+[31m-    public static Builder builder() {[m
+[31m-        return new Builder();[m
+[31m-    }[m
+[31m-[m
+     public static class Builder {[m
+         private List<Descriptor> accessibilities;[m
+         private List<Descriptor> roles;[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/data/Event.java b/parser/src/main/java/io/lindstrom/mpd/data/Event.java[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mindex a97fbc0..f44b94b[m
+[1m--- a/parser/src/main/java/io/lindstrom/mpd/data/Event.java[m
+[1m+++ b/parser/src/main/java/io/lindstrom/mpd/data/Event.java[m
+[36m@@ -1,27 +1,31 @@[m
+ package io.lindstrom.mpd.data;[m
+ [m
+[31m-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;[m
+[31m-[m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlAttribute;[m
+ import java.util.Objects;[m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlElement;[m
+ [m
+ public class Event {[m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "presentationTime")[m
+     private final Long presentationTime;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "duration")[m
+     private final Long duration;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "id")[m
+     private final Long id;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "messageData")[m
+     private final String messageData;[m
+ [m
+[31m-    private Event(Long presentationTime, Long duration, Long id, String messageData) {[m
+[32m+[m[32m    @XmlElement (name = "Signal")[m
+[32m+[m[32m    private final Signal signal;[m
+[32m+[m
+[32m+[m[32m    private Event(Long presentationTime, Long duration, Long id, String messageData, Signal signal) {[m
+         this.presentationTime = presentationTime;[m
+         this.duration = duration;[m
+         this.id = id;[m
+         this.messageData = messageData;[m
+[32m+[m[32m        this.signal = signal;[m
+     }[m
+ [m
+     @SuppressWarnings("unused")[m
+[36m@@ -30,6 +34,7 @@[m [mpublic class Event {[m
+         this.duration = null;[m
+         this.id = null;[m
+         this.messageData = null;[m
+[32m+[m[32m        this.signal = null;[m
+     }[m
+ [m
+     public Long getPresentationTime() {[m
+[36m@@ -48,30 +53,28 @@[m [mpublic class Event {[m
+         return messageData;[m
+     }[m
+ [m
+[31m-    @Override[m
+[31m-    public boolean equals(Object o) {[m
+[31m-        if (this == o) return true;[m
+[31m-        if (o == null || getClass() != o.getClass()) return false;[m
+[31m-        Event event = (Event) o;[m
+[31m-        return Objects.equals(presentationTime, event.presentationTime) &&[m
+[31m-                Objects.equals(duration, event.duration) &&[m
+[31m-                Objects.equals(id, event.id) &&[m
+[31m-                Objects.equals(messageData, event.messageData);[m
+[32m+[m[32m    public Signal getSignal() {[m
+[32m+[m[32m        return signal;[m
+     }[m
+ [m
+     @Override[m
+     public int hashCode() {[m
+[31m-        return Objects.hash(presentationTime, duration, id, messageData);[m
+[32m+[m[32m        return super.hashCode();[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    @Override[m
+[32m+[m[32m    public boolean equals(Object obj) {[m
+[32m+[m[32m        return super.equals(obj);[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    @Override[m
+[32m+[m[32m    protected Object clone() throws CloneNotSupportedException {[m
+[32m+[m[32m        return super.clone();[m
+     }[m
+ [m
+     @Override[m
+     public String toString() {[m
+[31m-        return "Event{" +[m
+[31m-                "presentationTime=" + presentationTime +[m
+[31m-                ", duration=" + duration +[m
+[31m-                ", id=" + id +[m
+[31m-                ", messageData='" + messageData + '\'' +[m
+[31m-                '}';[m
+[32m+[m[32m        return super.toString();[m
+     }[m
+ [m
+     public Builder buildUpon() {[m
+[36m@@ -79,11 +82,8 @@[m [mpublic class Event {[m
+                 .withPresentationTime(presentationTime)[m
+                 .withDuration(duration)[m
+                 .withId(id)[m
+[31m-                .withMessageData(messageData);[m
+[31m-    }[m
+[31m-[m
+[31m-    public static Builder builder() {[m
+[31m-        return new Builder();[m
+[32m+[m[32m                .withMessageData(messageData)[m
+[32m+[m[32m                .withSignal(signal);[m
+     }[m
+ [m
+     public static class Builder {[m
+[36m@@ -91,6 +91,7 @@[m [mpublic class Event {[m
+         private Long duration;[m
+         private Long id;[m
+         private String messageData;[m
+[32m+[m[32m        private Signal signal;[m
+ [m
+         public Builder withPresentationTime(Long presentationTime) {[m
+             this.presentationTime = presentationTime;[m
+[36m@@ -112,8 +113,13 @@[m [mpublic class Event {[m
+             return this;[m
+         }[m
+ [m
+[32m+[m[32m        public Builder withSignal(Signal signal) {[m
+[32m+[m[32m            this.signal = signal;[m
+[32m+[m[32m            return this;[m
+[32m+[m[32m        }[m
+[32m+[m
+         public Event build() {[m
+[31m-            return new Event(presentationTime, duration, id, messageData);[m
+[32m+[m[32m            return new Event(presentationTime, duration, id, messageData, signal);[m
+         }[m
+     }[m
+ }[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/data/EventStream.java b/parser/src/main/java/io/lindstrom/mpd/data/EventStream.java[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mindex fe96cd1..0973754[m
+[1m--- a/parser/src/main/java/io/lindstrom/mpd/data/EventStream.java[m
+[1m+++ b/parser/src/main/java/io/lindstrom/mpd/data/EventStream.java[m
+[36m@@ -1,41 +1,38 @@[m
+ package io.lindstrom.mpd.data;[m
+ [m
+[31m-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;[m
+ import io.lindstrom.mpd.support.Utils;[m
+ [m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlAttribute;[m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlElement;[m
+ import java.util.List;[m
+ import java.util.Objects;[m
+ [m
+ public class EventStream {[m
+[31m-    @JacksonXmlProperty(localName = "Event", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "Event", namespace = MPD.NAMESPACE)[m
+     private final List<Event> events;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true, namespace = "http://www.w3.org/1999/xlink")[m
+[32m+[m[32m    @XmlAttribute(name = "href", namespace = "http://www.w3.org/1999/xlink")[m
+     private final String href;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true, namespace = "http://www.w3.org/1999/xlink")[m
+[32m+[m[32m    @XmlAttribute(name = "actuate", namespace = "http://www.w3.org/1999/xlink")[m
+     private final ActuateType actuate;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "schemeIdUri", required = true)[m
+     private final String schemeIdUri;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "value")[m
+     private final String value;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "timescale")[m
+     private final Long timescale;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[31m-    private final String messageData;[m
+[31m-[m
+[31m-    private EventStream(List<Event> events, String href, ActuateType actuate, String schemeIdUri, String value, Long timescale, String messageData) {[m
+[32m+[m[32m    private EventStream(List<Event> events, String href, ActuateType actuate, String schemeIdUri, String value, Long timescale) {[m
+         this.events = events;[m
+         this.href = href;[m
+         this.actuate = actuate;[m
+         this.schemeIdUri = schemeIdUri;[m
+         this.value = value;[m
+         this.timescale = timescale;[m
+[31m-        this.messageData = messageData;[m
+     }[m
+ [m
+     @SuppressWarnings("unused")[m
+[36m@@ -46,7 +43,6 @@[m [mpublic class EventStream {[m
+         this.schemeIdUri = null;[m
+         this.value = null;[m
+         this.timescale = null;[m
+[31m-        this.messageData = null;[m
+     }[m
+ [m
+     public List<Event> getEvents() {[m
+[36m@@ -73,23 +69,6 @@[m [mpublic class EventStream {[m
+         return timescale;[m
+     }[m
+ [m
+[31m-    public String getMessageData() {[m
+[31m-        return messageData;[m
+[31m-    }[m
+[31m-[m
+[31m-    @Override[m
+[31m-    public String toString() {[m
+[31m-        return "EventStream{" +[m
+[31m-                "events=" + events +[m
+[31m-                ", href='" + href + '\'' +[m
+[31m-                ", actuate=" + actuate +[m
+[31m-                ", schemeIdUri='" + schemeIdUri + '\'' +[m
+[31m-                ", value='" + value + '\'' +[m
+[31m-                ", timescale=" + timescale +[m
+[31m-                ", messageData='" + messageData + '\'' +[m
+[31m-                '}';[m
+[31m-    }[m
+[31m-[m
+     @Override[m
+     public boolean equals(Object o) {[m
+         if (this == o) return true;[m
+[36m@@ -100,13 +79,24 @@[m [mpublic class EventStream {[m
+                 actuate == that.actuate &&[m
+                 Objects.equals(schemeIdUri, that.schemeIdUri) &&[m
+                 Objects.equals(value, that.value) &&[m
+[31m-                Objects.equals(timescale, that.timescale) &&[m
+[31m-                Objects.equals(messageData, that.messageData);[m
+[32m+[m[32m                Objects.equals(timescale, that.timescale);[m
+     }[m
+ [m
+     @Override[m
+     public int hashCode() {[m
+[31m-        return Objects.hash(events, href, actuate, schemeIdUri, value, timescale, messageData);[m
+[32m+[m[32m        return Objects.hash(events, href, actuate, schemeIdUri, value, timescale);[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    @Override[m
+[32m+[m[32m    public String toString() {[m
+[32m+[m[32m        return "EventStream{" +[m
+[32m+[m[32m                "events=" + events +[m
+[32m+[m[32m                ", href='" + href + '\'' +[m
+[32m+[m[32m                ", actuate=" + actuate +[m
+[32m+[m[32m                ", schemeIdUri='" + schemeIdUri + '\'' +[m
+[32m+[m[32m                ", value='" + value + '\'' +[m
+[32m+[m[32m                ", timescale=" + timescale +[m
+[32m+[m[32m                '}';[m
+     }[m
+ [m
+     public Builder buildUpon() {[m
+[36m@@ -116,12 +106,7 @@[m [mpublic class EventStream {[m
+                 .withActuate(actuate)[m
+                 .withSchemeIdUri(schemeIdUri)[m
+                 .withValue(value)[m
+[31m-                .withTimescale(timescale)[m
+[31m-                .withMessageData(messageData);[m
+[31m-    }[m
+[31m-[m
+[31m-    public static Builder builder() {[m
+[31m-        return new Builder();[m
+[32m+[m[32m                .withTimescale(timescale);[m
+     }[m
+ [m
+     public static class Builder {[m
+[36m@@ -131,7 +116,6 @@[m [mpublic class EventStream {[m
+         private String schemeIdUri;[m
+         private String value;[m
+         private Long timescale;[m
+[31m-        private String messageData;[m
+ [m
+         public Builder withEvents(List<Event> events) {[m
+             this.events = events;[m
+[36m@@ -163,13 +147,8 @@[m [mpublic class EventStream {[m
+             return this;[m
+         }[m
+ [m
+[31m-        public Builder withMessageData(String messageData) {[m
+[31m-            this.messageData = messageData;[m
+[31m-            return this;[m
+[31m-        }[m
+[31m-[m
+         public EventStream build() {[m
+[31m-            return new EventStream(events, href, actuate, schemeIdUri, value, timescale, messageData);[m
+[32m+[m[32m            return new EventStream(events, href, actuate, schemeIdUri, value, timescale);[m
+         }[m
+     }[m
+ }[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/data/FrameRate.java b/parser/src/main/java/io/lindstrom/mpd/data/FrameRate.java[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mindex cddfa28..a5365d4[m
+[1m--- a/parser/src/main/java/io/lindstrom/mpd/data/FrameRate.java[m
+[1m+++ b/parser/src/main/java/io/lindstrom/mpd/data/FrameRate.java[m
+[36m@@ -1,15 +1,9 @@[m
+ package io.lindstrom.mpd.data;[m
+ [m
+ import com.fasterxml.jackson.annotation.JsonIgnore;[m
+[31m-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;[m
+[31m-import com.fasterxml.jackson.databind.annotation.JsonSerialize;[m
+[31m-import io.lindstrom.mpd.support.FrameRateDeserializer;[m
+[31m-import io.lindstrom.mpd.support.FrameRateSerializer;[m
+ [m
+ import java.util.Objects;[m
+ [m
+[31m-@JsonSerialize(using = FrameRateSerializer.class)[m
+[31m-@JsonDeserialize(using = FrameRateDeserializer.class)[m
+ public class FrameRate {[m
+     private final long numerator;[m
+     private final Long denominator;[m
+[36m@@ -65,14 +59,6 @@[m [mpublic class FrameRate {[m
+                 .withDenominator(denominator);[m
+     }[m
+ [m
+[31m-    public static FrameRate of(long frameRate) {[m
+[31m-        return new FrameRate(frameRate, null);[m
+[31m-    }[m
+[31m-[m
+[31m-    public static Builder builder() {[m
+[31m-        return new Builder();[m
+[31m-    }[m
+[31m-[m
+     public static class Builder {[m
+         private long numerator;[m
+         private Long denominator;[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/data/MPD.java b/parser/src/main/java/io/lindstrom/mpd/data/MPD.java[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mindex 481bea9..f3fedb7[m
+[1m--- a/parser/src/main/java/io/lindstrom/mpd/data/MPD.java[m
+[1m+++ b/parser/src/main/java/io/lindstrom/mpd/data/MPD.java[m
+[36m@@ -1,18 +1,22 @@[m
+ package io.lindstrom.mpd.data;[m
+ [m
+[31m-import com.fasterxml.jackson.annotation.JsonPropertyOrder;[m
+[31m-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;[m
+[31m-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;[m
+[32m+[m[32mimport com.fasterxml.jackson.annotation.JsonIgnore;[m
+ import io.lindstrom.mpd.data.descriptor.Descriptor;[m
+[32m+[m[32mimport io.lindstrom.mpd.data.descriptor.Scope;[m
+[32m+[m[32mimport io.lindstrom.mpd.data.descriptor.ServiceDescription;[m
+ import io.lindstrom.mpd.support.Utils;[m
+ [m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlAttribute;[m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlElement;[m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlRootElement;[m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlType;[m
+ import java.time.Duration;[m
+ import java.time.OffsetDateTime;[m
+ import java.util.Collections;[m
+ import java.util.List;[m
+ import java.util.Objects;[m
+ [m
+[31m-@JsonPropertyOrder({[m
+[32m+[m[32m@XmlType(propOrder = {[m
+     "programInformations",[m
+     "baseURLs",[m
+     "locations",[m
+[36m@@ -22,86 +26,83 @@[m [mimport java.util.Objects;[m
+     "supplementalProperties",[m
+     "utcTimings"[m
+ })[m
+[31m-@JacksonXmlRootElement(localName = "MPD", namespace = io.lindstrom.mpd.data.MPD.NAMESPACE)[m
+[32m+[m[32m@XmlRootElement(name = "MPD", namespace = io.lindstrom.mpd.data.MPD.NAMESPACE)[m
+ public class MPD {[m
+[31m-    static final String NAMESPACE = "urn:mpeg:dash:schema:mpd:2011";[m
+[32m+[m[32m    public static final String NAMESPACE = "urn:mpeg:dash:schema:mpd:2011";[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "ProgramInformation", namespace = NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "ProgramInformation", namespace = NAMESPACE)[m
+     private final List<ProgramInformation> programInformations;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "BaseURL", namespace = NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "BaseURL", namespace = NAMESPACE)[m
+     private final List<BaseURL> baseURLs;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "Location", namespace = NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "Location", namespace = NAMESPACE)[m
+     private final List<String> locations;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "Period", namespace = NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "Period", required = true, namespace = NAMESPACE)[m
+     private final List<Period> periods;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "Metrics", namespace = NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "Metrics", namespace = NAMESPACE)[m
+     private final List<Metrics> metrics;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "EssentialProperty", namespace = NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "EssentialProperty", namespace = NAMESPACE)[m
+     private final List<Descriptor> essentialProperties;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "SupplementalProperty", namespace = NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "SupplementalProperty", namespace = NAMESPACE)[m
+     private final List<Descriptor> supplementalProperties;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "UTCTiming", namespace = NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "UTCTiming", namespace = NAMESPACE)[m
+     private final List<UTCTiming> utcTimings;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true, namespace = "http://www.w3.org/2001/XMLSchema-instance")[m
+[31m-    private final String schemaLocation;[m
+[31m-[m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "id")[m
+     private final String id;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "profiles", required = true)[m
+     private final Profiles profiles;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "type")[m
+     private final PresentationType type;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "availabilityStartTime")[m
+     private final OffsetDateTime availabilityStartTime;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "availabilityEndTime")[m
+     private final OffsetDateTime availabilityEndTime;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "publishTime")[m
+     private final OffsetDateTime publishTime;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "mediaPresentationDuration")[m
+     private final Duration mediaPresentationDuration;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "minimumUpdatePeriod")[m
+     private final Duration minimumUpdatePeriod;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "minBufferTime", required = true)[m
+     private final Duration minBufferTime;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "timeShiftBufferDepth")[m
+     private final Duration timeShiftBufferDepth;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "suggestedPresentationDelay")[m
+     private final Duration suggestedPresentationDelay;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "maxSegmentDuration")[m
+     private final Duration maxSegmentDuration;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "maxSubsegmentDuration")[m
+     private final Duration maxSubsegmentDuration;[m
+ [m
+[32m+[m[32m    @XmlAttribute(name = "ServiceDescription")[m
+[32m+[m[32m    private final ServiceDescription serviceDescription;[m
+ [m
+[32m+[m[32m    @XmlAttribute(name = "Scope")[m
+[32m+[m[32m    private final Scope scope;[m
+ [m
+[31m-    private MPD(String schemaLocation, List<ProgramInformation> programInformations, List<BaseURL> baseURLs, List<String> locations,[m
+[31m-                List<Period> periods, List<Metrics> metrics, List<Descriptor> essentialProperties,[m
+[31m-                List<Descriptor> supplementalProperties, List<UTCTiming> utcTimings, String id,[m
+[31m-                Profiles profiles, PresentationType type, OffsetDateTime availabilityStartTime,[m
+[31m-                OffsetDateTime availabilityEndTime, OffsetDateTime publishTime, Duration mediaPresentationDuration,[m
+[31m-                Duration minimumUpdatePeriod, Duration minBufferTime, Duration timeShiftBufferDepth,[m
+[31m-                Duration suggestedPresentationDelay, Duration maxSegmentDuration, Duration maxSubsegmentDuration) {[m
+[31m-        this.schemaLocation = schemaLocation;[m
+[32m+[m[32m    @XmlAttribute(namespace = "http://www.w3.org/2001/XMLSchema-instance")[m
+[32m+[m[32m    private final String schemaLocation;[m
+[32m+[m
+[32m+[m[32m    private MPD(List<ProgramInformation> programInformations, List<BaseURL> baseURLs, List<String> locations, List<Period> periods, List<Metrics> metrics, List<Descriptor> essentialProperties, List<Descriptor> supplementalProperties, List<UTCTiming> utcTimings, String id, Profiles profiles, PresentationType type, OffsetDateTime availabilityStartTime, OffsetDateTime availabilityEndTime, OffsetDateTime publishTime, Duration mediaPresentationDuration, Duration minimumUpdatePeriod, Duration minBufferTime, Duration timeShiftBufferDepth, Duration suggestedPresentationDelay, Duration maxSegmentDuration, Duration maxSubsegmentDuration, String schemaLocation, ServiceDescription serviceDescription, Scope scope) {[m
+         this.programInformations = programInformations;[m
+         this.baseURLs = baseURLs;[m
+         this.locations = locations;[m
+[36m@@ -123,6 +124,9 @@[m [mpublic class MPD {[m
+         this.suggestedPresentationDelay = suggestedPresentationDelay;[m
+         this.maxSegmentDuration = maxSegmentDuration;[m
+         this.maxSubsegmentDuration = maxSubsegmentDuration;[m
+[32m+[m[32m        this.schemaLocation = schemaLocation;[m
+[32m+[m[32m        this.serviceDescription = serviceDescription;[m
+[32m+[m[32m        this.scope = scope;[m
+     }[m
+ [m
+     @SuppressWarnings("unused")[m
+[36m@@ -149,6 +153,8 @@[m [mpublic class MPD {[m
+         this.maxSegmentDuration = null;[m
+         this.maxSubsegmentDuration = null;[m
+         this.schemaLocation = null;[m
+[32m+[m[32m        this.serviceDescription = null;[m
+[32m+[m[32m        this.scope = null;[m
+     }[m
+ [m
+     public List<ProgramInformation> getProgramInformations() {[m
+[36m@@ -187,6 +193,7 @@[m [mpublic class MPD {[m
+         return id;[m
+     }[m
+ [m
+[32m+[m[32m    @JsonIgnore[m
+     public List<Profile> getProfiles() {[m
+         if (profiles == null) {[m
+             return Collections.emptyList();[m
+[36m@@ -195,6 +202,7 @@[m [mpublic class MPD {[m
+         }[m
+     }[m
+ [m
+[32m+[m[32m    @JsonIgnore[m
+     public List<String> getInteroperabilityPointsAndExtensions() {[m
+         if (profiles == null) {[m
+             return Collections.emptyList();[m
+[36m@@ -251,6 +259,18 @@[m [mpublic class MPD {[m
+         return schemaLocation;[m
+     }[m
+ [m
+[32m+[m[32m    public static String getNAMESPACE() {[m
+[32m+[m[32m        return NAMESPACE;[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    public ServiceDescription getServiceDescription() {[m
+[32m+[m[32m        return serviceDescription;[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    public Scope getScope() {[m
+[32m+[m[32m        return scope;[m
+[32m+[m[32m    }[m
+[32m+[m
+     @Override[m
+     public boolean equals(Object o) {[m
+         if (this == o) return true;[m
+[36m@@ -310,6 +330,8 @@[m [mpublic class MPD {[m
+                 ", maxSegmentDuration=" + maxSegmentDuration +[m
+                 ", maxSubsegmentDuration=" + maxSubsegmentDuration +[m
+                 ", schemaLocation='" + schemaLocation + '\'' +[m
+[32m+[m[32m                ", serviceDescription='" + serviceDescription + '\'' +[m
+[32m+[m[32m                ", scope='" + scope + '\'' +[m
+                 '}';[m
+     }[m
+ [m
+[36m@@ -336,11 +358,9 @@[m [mpublic class MPD {[m
+                 .withSuggestedPresentationDelay(suggestedPresentationDelay)[m
+                 .withMaxSegmentDuration(maxSegmentDuration)[m
+                 .withMaxSubsegmentDuration(maxSubsegmentDuration)[m
+[31m-                .withSchemaLocation(schemaLocation);[m
+[31m-    }[m
+[31m-[m
+[31m-    public static Builder builder() {[m
+[31m-        return new Builder();[m
+[32m+[m[32m                .withSchemaLocation(schemaLocation)[m
+[32m+[m[32m                .withServiceDescription(serviceDescription)[m
+[32m+[m[32m                .withScope(scope);[m
+     }[m
+ [m
+     public static class Builder {[m
+[36m@@ -368,6 +388,8 @@[m [mpublic class MPD {[m
+         private Duration maxSegmentDuration;[m
+         private Duration maxSubsegmentDuration;[m
+         private String schemaLocation;[m
+[32m+[m[32m        private ServiceDescription serviceDescription;[m
+[32m+[m[32m        private Scope scope;[m
+ [m
+         public Builder() {[m
+             this.schemaLocation = DEFAULT_SCHEMA_LOCATION;[m
+[36m@@ -515,8 +537,18 @@[m [mpublic class MPD {[m
+             return this;[m
+         }[m
+ [m
+[32m+[m[32m        public Builder withServiceDescription(ServiceDescription serviceDescription) {[m
+[32m+[m[32m            this.serviceDescription = serviceDescription;[m
+[32m+[m[32m            return this;[m
+[32m+[m[32m        }[m
+[32m+[m
+[32m+[m[32m        public Builder withScope(Scope scope) {[m
+[32m+[m[32m            this.scope = scope;[m
+[32m+[m[32m            return this;[m
+[32m+[m[32m        }[m
+[32m+[m
+         public MPD build() {[m
+[31m-            return new MPD(schemaLocation, programInformations, baseURLs, locations, periods, metrics, essentialProperties, supplementalProperties, utcTimings, id, profiles, type, availabilityStartTime, availabilityEndTime, publishTime, mediaPresentationDuration, minimumUpdatePeriod, minBufferTime, timeShiftBufferDepth, suggestedPresentationDelay, maxSegmentDuration, maxSubsegmentDuration);[m
+[32m+[m[32m            return new MPD(programInformations, baseURLs, locations, periods, metrics, essentialProperties, supplementalProperties, utcTimings, id, profiles, type, availabilityStartTime, availabilityEndTime, publishTime, mediaPresentationDuration, minimumUpdatePeriod, minBufferTime, timeShiftBufferDepth, suggestedPresentationDelay, maxSegmentDuration, maxSubsegmentDuration, schemaLocation, serviceDescription, scope);[m
+         }[m
+     }[m
+ }[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/data/Metrics.java b/parser/src/main/java/io/lindstrom/mpd/data/Metrics.java[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mindex 3e2765b..3e74dde[m
+[1m--- a/parser/src/main/java/io/lindstrom/mpd/data/Metrics.java[m
+[1m+++ b/parser/src/main/java/io/lindstrom/mpd/data/Metrics.java[m
+[36m@@ -1,20 +1,21 @@[m
+ package io.lindstrom.mpd.data;[m
+ [m
+[31m-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;[m
+ import io.lindstrom.mpd.data.descriptor.Descriptor;[m
+ import io.lindstrom.mpd.support.Utils;[m
+ [m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlAttribute;[m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlElement;[m
+ import java.util.List;[m
+ import java.util.Objects;[m
+ [m
+ public class Metrics {[m
+[31m-    @JacksonXmlProperty(localName = "Reporting", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "Reporting", required = true, namespace = MPD.NAMESPACE)[m
+     private final List<Descriptor> reportings;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "Range", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "Range", namespace = MPD.NAMESPACE)[m
+     private final List<Range> ranges;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "metrics", required = true)[m
+     private final String metrics;[m
+ [m
+     private Metrics(List<Descriptor> reportings, List<Range> ranges, String metrics) {[m
+[36m@@ -73,10 +74,6 @@[m [mpublic class Metrics {[m
+                 .withMetrics(metrics);[m
+     }[m
+ [m
+[31m-    public static Builder builder() {[m
+[31m-        return new Builder();[m
+[31m-    }[m
+[31m-[m
+     public static class Builder {[m
+         private List<Descriptor> reportings;[m
+         private List<Range> ranges;[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/data/Period.java b/parser/src/main/java/io/lindstrom/mpd/data/Period.java[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mindex 8e83d98..63390bf[m
+[1m--- a/parser/src/main/java/io/lindstrom/mpd/data/Period.java[m
+[1m+++ b/parser/src/main/java/io/lindstrom/mpd/data/Period.java[m
+[36m@@ -1,15 +1,16 @@[m
+ package io.lindstrom.mpd.data;[m
+ [m
+[31m-import com.fasterxml.jackson.annotation.JsonPropertyOrder;[m
+[31m-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;[m
+ import io.lindstrom.mpd.data.descriptor.Descriptor;[m
+ import io.lindstrom.mpd.support.Utils;[m
+ [m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlAttribute;[m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlElement;[m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlType;[m
+ import java.time.Duration;[m
+ import java.util.List;[m
+ import java.util.Objects;[m
+ [m
+[31m-@JsonPropertyOrder({[m
+[32m+[m[32m@XmlType(propOrder = {[m
+         "id",[m
+ [m
+         "baseURLs",[m
+[36m@@ -23,49 +24,49 @@[m [mimport java.util.Objects;[m
+         "supplementalProperties"[m
+ })[m
+ public class Period {[m
+[31m-    @JacksonXmlProperty(localName = "BaseURL", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "BaseURL", namespace = MPD.NAMESPACE)[m
+     private final List<BaseURL> baseURLs;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "SegmentBase", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "SegmentBase", namespace = MPD.NAMESPACE)[m
+     private final SegmentBase segmentBase;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "SegmentList", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "SegmentList", namespace = MPD.NAMESPACE)[m
+     private final SegmentList segmentList;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "SegmentTemplate", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "SegmentTemplate", namespace = MPD.NAMESPACE)[m
+     private final SegmentTemplate segmentTemplate;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "AssetIdentifier", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "AssetIdentifier", namespace = MPD.NAMESPACE)[m
+     private final Descriptor assetIdentifier;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "EventStream", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "EventStream", namespace = MPD.NAMESPACE)[m
+     private final List<EventStream> eventStreams;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "AdaptationSet", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "AdaptationSet", namespace = MPD.NAMESPACE)[m
+     private final List<AdaptationSet> adaptationSets;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "Subset", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "Subset", namespace = MPD.NAMESPACE)[m
+     private final List<Subset> subsets;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "SupplementalProperty", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "SupplementalProperty", namespace = MPD.NAMESPACE)[m
+     private final List<Descriptor> supplementalProperties;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true, namespace = "http://www.w3.org/1999/xlink")[m
+[32m+[m[32m    @XmlAttribute(name = "href", namespace = "http://www.w3.org/1999/xlink")[m
+     private final String href;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true, namespace = "http://www.w3.org/1999/xlink")[m
+[32m+[m[32m    @XmlAttribute(name = "actuate", namespace = "http://www.w3.org/1999/xlink")[m
+     private final ActuateType actuate;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "id")[m
+     private final String id;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "start")[m
+     private final Duration start;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "duration")[m
+     private final Duration duration;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "bitstreamSwitching")[m
+     private final Boolean bitstreamSwitching;[m
+ [m
+     private Period(List<BaseURL> baseURLs, SegmentBase segmentBase, SegmentList segmentList, SegmentTemplate segmentTemplate, Descriptor assetIdentifier, List<EventStream> eventStreams, List<AdaptationSet> adaptationSets, List<Subset> subsets, List<Descriptor> supplementalProperties, String href, ActuateType actuate, String id, Duration start, Duration duration, Boolean bitstreamSwitching) {[m
+[36m@@ -232,10 +233,6 @@[m [mpublic class Period {[m
+                 .withBitstreamSwitching(bitstreamSwitching);[m
+     }[m
+ [m
+[31m-    public static Builder builder() {[m
+[31m-        return new Builder();[m
+[31m-    }[m
+[31m-[m
+     public static class Builder {[m
+         private List<BaseURL> baseURLs;[m
+         private SegmentBase segmentBase;[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/data/PresentationType.java b/parser/src/main/java/io/lindstrom/mpd/data/PresentationType.java[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/data/Profile.java b/parser/src/main/java/io/lindstrom/mpd/data/Profile.java[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/data/Profiles.java b/parser/src/main/java/io/lindstrom/mpd/data/Profiles.java[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mindex e50aaf8..35a5653[m
+[1m--- a/parser/src/main/java/io/lindstrom/mpd/data/Profiles.java[m
+[1m+++ b/parser/src/main/java/io/lindstrom/mpd/data/Profiles.java[m
+[36m@@ -1,16 +1,10 @@[m
+ package io.lindstrom.mpd.data;[m
+ [m
+[31m-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;[m
+[31m-import com.fasterxml.jackson.databind.annotation.JsonSerialize;[m
+[31m-import io.lindstrom.mpd.support.ProfilesDeserializer;[m
+[31m-import io.lindstrom.mpd.support.ProfilesSerializer;[m
+ import io.lindstrom.mpd.support.Utils;[m
+ [m
+ import java.util.List;[m
+ import java.util.Objects;[m
+ [m
+[31m-@JsonSerialize(using = ProfilesSerializer.class)[m
+[31m-@JsonDeserialize(using = ProfilesDeserializer.class)[m
+ public class Profiles {[m
+     private final List<Profile> profiles;[m
+     private final List<String> interoperabilityPointsAndExtensions;[m
+[36m@@ -61,10 +55,6 @@[m [mpublic class Profiles {[m
+                 .withInteroperabilityPointsAndExtensions(interoperabilityPointsAndExtensions);[m
+     }[m
+ [m
+[31m-    public static Builder builder() {[m
+[31m-        return new Builder();[m
+[31m-    }[m
+[31m-[m
+     public static class Builder {[m
+         private List<Profile> profiles;[m
+         private List<String> interoperabilityPointsAndExtensions;[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/data/ProgramInformation.java b/parser/src/main/java/io/lindstrom/mpd/data/ProgramInformation.java[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mindex 5c4ec62..563a556[m
+[1m--- a/parser/src/main/java/io/lindstrom/mpd/data/ProgramInformation.java[m
+[1m+++ b/parser/src/main/java/io/lindstrom/mpd/data/ProgramInformation.java[m
+[36m@@ -1,30 +1,30 @@[m
+ package io.lindstrom.mpd.data;[m
+ [m
+[31m-import com.fasterxml.jackson.annotation.JsonPropertyOrder;[m
+[31m-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;[m
+[31m-[m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlAttribute;[m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlElement;[m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlType;[m
+ import java.util.Objects;[m
+ [m
+[31m-@JsonPropertyOrder({[m
+[32m+[m[32m@XmlType(propOrder = {[m
+     "title",[m
+     "source",[m
+     "copyright",[m
+     "any"[m
+ })[m
+ public class ProgramInformation {[m
+[31m-    @JacksonXmlProperty(localName = "Title", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "Title", namespace = MPD.NAMESPACE)[m
+     private final String title;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "Source", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "Source", namespace = MPD.NAMESPACE)[m
+     private final String source;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "Copyright", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "Copyright", namespace = MPD.NAMESPACE)[m
+     private final String copyright;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "lang")[m
+     private final String lang;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "moreInformationURL")[m
+     private final String moreInformationURL;[m
+ [m
+     private ProgramInformation(String title, String source, String copyright, String lang, String moreInformationURL) {[m
+[36m@@ -101,10 +101,6 @@[m [mpublic class ProgramInformation {[m
+                 .withMoreInformationURL(moreInformationURL);[m
+     }[m
+ [m
+[31m-    public static Builder builder() {[m
+[31m-        return new Builder();[m
+[31m-    }[m
+[31m-[m
+     public static class Builder {[m
+         private String title;[m
+         private String source;[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/data/Range.java b/parser/src/main/java/io/lindstrom/mpd/data/Range.java[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mindex b6102f2..428a90c[m
+[1m--- a/parser/src/main/java/io/lindstrom/mpd/data/Range.java[m
+[1m+++ b/parser/src/main/java/io/lindstrom/mpd/data/Range.java[m
+[36m@@ -1,15 +1,14 @@[m
+ package io.lindstrom.mpd.data;[m
+ [m
+[31m-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;[m
+[31m-[m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlAttribute;[m
+ import java.time.Duration;[m
+ import java.util.Objects;[m
+ [m
+ public class Range {[m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "starttime")[m
+     private final Duration starttime;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "duration")[m
+     private final Duration duration;[m
+ [m
+     private Range(Duration starttime, Duration duration) {[m
+[36m@@ -59,10 +58,6 @@[m [mpublic class Range {[m
+                 .withDuration(duration);[m
+     }[m
+ [m
+[31m-    public static Builder builder() {[m
+[31m-        return new Builder();[m
+[31m-    }[m
+[31m-[m
+     public static class Builder {[m
+         private Duration starttime;[m
+         private Duration duration;[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/data/Ratio.java b/parser/src/main/java/io/lindstrom/mpd/data/Ratio.java[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mindex e65881e..39ccbcc[m
+[1m--- a/parser/src/main/java/io/lindstrom/mpd/data/Ratio.java[m
+[1m+++ b/parser/src/main/java/io/lindstrom/mpd/data/Ratio.java[m
+[36m@@ -1,14 +1,7 @@[m
+ package io.lindstrom.mpd.data;[m
+ [m
+[31m-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;[m
+[31m-import com.fasterxml.jackson.databind.annotation.JsonSerialize;[m
+[31m-import io.lindstrom.mpd.support.RatioDeserializer;[m
+[31m-import io.lindstrom.mpd.support.RatioSerializer;[m
+[31m-[m
+ import java.util.Objects;[m
+ [m
+[31m-@JsonSerialize(using = RatioSerializer.class)[m
+[31m-@JsonDeserialize(using = RatioDeserializer.class)[m
+ public class Ratio {[m
+     private final Long a;[m
+     private final Long b;[m
+[36m@@ -51,14 +44,6 @@[m [mpublic class Ratio {[m
+                 .withB(b);[m
+     }[m
+ [m
+[31m-    public static Builder builder() {[m
+[31m-        return new Builder();[m
+[31m-    }[m
+[31m-[m
+[31m-    public static Ratio of(long a, long b) {[m
+[31m-        return new Ratio(a, b);[m
+[31m-    }[m
+[31m-[m
+     public static class Builder {[m
+         private Long a;[m
+         private Long b;[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/data/Representation.java b/parser/src/main/java/io/lindstrom/mpd/data/Representation.java[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mindex 506e4c4..ddffd33[m
+[1m--- a/parser/src/main/java/io/lindstrom/mpd/data/Representation.java[m
+[1m+++ b/parser/src/main/java/io/lindstrom/mpd/data/Representation.java[m
+[36m@@ -1,15 +1,16 @@[m
+ package io.lindstrom.mpd.data;[m
+ [m
+[31m-import com.fasterxml.jackson.annotation.JsonPropertyOrder;[m
+[31m-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;[m
+ import io.lindstrom.mpd.data.descriptor.Descriptor;[m
+ import io.lindstrom.mpd.support.Utils;[m
+ [m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlAttribute;[m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlElement;[m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlType;[m
+ import java.util.List;[m
+ import java.util.Objects;[m
+ [m
+ [m
+[31m-@JsonPropertyOrder({[m
+[32m+[m[32m@XmlType(propOrder = {[m
+         "id",[m
+         "bandwidth",[m
+ [m
+[36m@@ -30,34 +31,34 @@[m [mimport java.util.Objects;[m
+         "segmentTemplate"[m
+ })[m
+ public class Representation extends RepresentationBase {[m
+[31m-    @JacksonXmlProperty(localName = "BaseURL", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "BaseURL", namespace = MPD.NAMESPACE)[m
+     private final List<BaseURL> baseURLs;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "SubRepresentation", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "SubRepresentation", namespace = MPD.NAMESPACE)[m
+     private final List<SubRepresentation> subRepresentations;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "SegmentBase", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "SegmentBase", namespace = MPD.NAMESPACE)[m
+     private final SegmentBase segmentBase;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "SegmentList", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "SegmentList", namespace = MPD.NAMESPACE)[m
+     private final SegmentList segmentList;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "SegmentTemplate", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "SegmentTemplate", namespace = MPD.NAMESPACE)[m
+     private final SegmentTemplate segmentTemplate;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "id", required = true)[m
+     private final String id;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "bandwidth", required = true)[m
+     private final long bandwidth;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "qualityRanking")[m
+     private final Long qualityRanking;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "dependencyId")[m
+     private final String dependencyId;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "mediaStreamStructureId")[m
+     private final String mediaStreamStructureId;[m
+ [m
+     private Representation(List<Descriptor> framePackings, List<Descriptor> audioChannelConfigurations, List<Descriptor> contentProtections, List<Descriptor> essentialProperties, List<Descriptor> supplementalProperties, List<EventStream> inbandEventStreams, String profiles, Long width, Long height, Ratio sar, FrameRate frameRate, String audioSamplingRate, String mimeType, String segmentProfiles, String codecs, Double maximumSAPPeriod, Long startWithSAP, Double maxPlayoutRate, Boolean codingDependency, VideoScanType scanType, List<BaseURL> baseURLs, List<SubRepresentation> subRepresentations, SegmentBase segmentBase, SegmentList segmentList, SegmentTemplate segmentTemplate, String id, long bandwidth, Long qualityRanking, String dependencyId, String mediaStreamStructureId) {[m
+[36m@@ -182,9 +183,7 @@[m [mpublic class Representation extends RepresentationBase {[m
+             .withMediaStreamStructureId(mediaStreamStructureId));[m
+     }[m
+ [m
+[31m-    public static Builder builder() {[m
+[31m-        return new Builder();[m
+[31m-    }[m
+[32m+[m
+ [m
+     public static class Builder extends RepresentationBase.AbstractBuilder<Builder> {[m
+         private List<BaseURL> baseURLs;[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/data/RepresentationBase.java b/parser/src/main/java/io/lindstrom/mpd/data/RepresentationBase.java[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mindex 30bc95e..45413f6[m
+[1m--- a/parser/src/main/java/io/lindstrom/mpd/data/RepresentationBase.java[m
+[1m+++ b/parser/src/main/java/io/lindstrom/mpd/data/RepresentationBase.java[m
+[36m@@ -1,15 +1,16 @@[m
+ package io.lindstrom.mpd.data;[m
+ [m
+[31m-import com.fasterxml.jackson.annotation.JsonPropertyOrder;[m
+[31m-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;[m
+ import io.lindstrom.mpd.data.descriptor.Descriptor;[m
+ import io.lindstrom.mpd.support.Utils;[m
+ [m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlAttribute;[m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlElement;[m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlType;[m
+ import java.util.List;[m
+ import java.util.Objects;[m
+ [m
+ [m
+[31m-@JsonPropertyOrder({[m
+[32m+[m[32m@XmlType(propOrder = {[m
+     "framePackings",[m
+     "audioChannelConfigurations",[m
+     "contentProtections",[m
+[36m@@ -18,64 +19,64 @@[m [mimport java.util.Objects;[m
+     "inbandEventStreams"[m
+ })[m
+ public abstract class RepresentationBase {[m
+[31m-    @JacksonXmlProperty(localName = "FramePacking", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "FramePacking", namespace = MPD.NAMESPACE)[m
+     private final List<Descriptor> framePackings;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "AudioChannelConfiguration", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "AudioChannelConfiguration", namespace = MPD.NAMESPACE)[m
+     private final List<Descriptor> audioChannelConfigurations;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "ContentProtection", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "ContentProtection", namespace = MPD.NAMESPACE)[m
+     private final List<Descriptor> contentProtections;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "EssentialProperty", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "EssentialProperty", namespace = MPD.NAMESPACE)[m
+     private final List<Descriptor> essentialProperties;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "SupplementalProperty", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "SupplementalProperty", namespace = MPD.NAMESPACE)[m
+     private final List<Descriptor> supplementalProperties;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "InbandEventStream", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "InbandEventStream", namespace = MPD.NAMESPACE)[m
+     private final List<EventStream> inbandEventStreams;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "profiles")[m
+     private final String profiles;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "width")[m
+     private final Long width;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "height")[m
+     private final Long height;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "sar")[m
+     private final Ratio sar;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "frameRate")[m
+     private final FrameRate frameRate;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "audioSamplingRate")[m
+     private final String audioSamplingRate;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "mimeType")[m
+     private final String mimeType;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "segmentProfiles")[m
+     private final String segmentProfiles;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "codecs")[m
+     private final String codecs;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "maximumSAPPeriod")[m
+     private final Double maximumSAPPeriod;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "startWithSAP")[m
+     private final Long startWithSAP;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "maxPlayoutRate")[m
+     private final Double maxPlayoutRate;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "codingDependency")[m
+     private final Boolean codingDependency;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "scanType")[m
+     private final VideoScanType scanType;[m
+ [m
+     RepresentationBase(List<Descriptor> framePackings, List<Descriptor> audioChannelConfigurations, List<Descriptor> contentProtections, List<Descriptor> essentialProperties, List<Descriptor> supplementalProperties, List<EventStream> inbandEventStreams, String profiles, Long width, Long height, Ratio sar, FrameRate frameRate, String audioSamplingRate, String mimeType, String segmentProfiles, String codecs, Double maximumSAPPeriod, Long startWithSAP, Double maxPlayoutRate, Boolean codingDependency, VideoScanType scanType) {[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/data/Segment.java b/parser/src/main/java/io/lindstrom/mpd/data/Segment.java[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mindex a1d3f3c..cbf3a14[m
+[1m--- a/parser/src/main/java/io/lindstrom/mpd/data/Segment.java[m
+[1m+++ b/parser/src/main/java/io/lindstrom/mpd/data/Segment.java[m
+[36m@@ -1,20 +1,19 @@[m
+ package io.lindstrom.mpd.data;[m
+ [m
+[31m-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;[m
+[31m-[m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlAttribute;[m
+ import java.util.Objects;[m
+ [m
+ public class Segment {[m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "t")[m
+     private final Long t;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "n")[m
+     private final Long n;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "d", required = true)[m
+     private final long d;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "r")[m
+     private final Long r;[m
+ [m
+     private Segment(Long t, Long n, long d, Long r) {[m
+[36m@@ -82,18 +81,6 @@[m [mpublic class Segment {[m
+                 .withR(r);[m
+     }[m
+ [m
+[31m-    public static Segment of(long t, long d, long r) {[m
+[31m-        return new Segment(t, null, d, r);[m
+[31m-    }[m
+[31m-[m
+[31m-    public static Segment of(long t, long d) {[m
+[31m-        return new Segment(t, null, d, null);[m
+[31m-    }[m
+[31m-[m
+[31m-    public static Builder builder() {[m
+[31m-        return new Builder();[m
+[31m-    }[m
+[31m-[m
+     public static class Builder {[m
+         private Long t;[m
+         private Long n;[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/data/SegmentBase.java b/parser/src/main/java/io/lindstrom/mpd/data/SegmentBase.java[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mindex a89032c..b96700d[m
+[1m--- a/parser/src/main/java/io/lindstrom/mpd/data/SegmentBase.java[m
+[1m+++ b/parser/src/main/java/io/lindstrom/mpd/data/SegmentBase.java[m
+[36m@@ -1,34 +1,37 @@[m
+ package io.lindstrom.mpd.data;[m
+ [m
+[31m-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;[m
+[31m-[m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlAttribute;[m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlElement;[m
+ import java.util.Objects;[m
+ [m
+ public class SegmentBase {[m
+[31m-    @JacksonXmlProperty(localName = "Initialization", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "Initialization", namespace = MPD.NAMESPACE)[m
+     private final URLType initialization;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "RepresentationIndex", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "RepresentationIndex", namespace = MPD.NAMESPACE)[m
+     private final URLType representationIndex;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "timescale")[m
+     private final Long timescale;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "presentationTimeOffset")[m
+     private final Long presentationTimeOffset;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "indexRange")[m
+     private final String indexRange;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "indexRangeExact")[m
+     private final Boolean indexRangeExact;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "availabilityTimeOffset")[m
+     private final Double availabilityTimeOffset;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "availabilityTimeComplete")[m
+     private final Boolean availabilityTimeComplete;[m
+ [m
+[32m+[m[32m    @XmlAttribute(name = "presentationDuration")[m
+[32m+[m[32m    private final String presentationDuration;[m
+[32m+[m
+     protected SegmentBase(URLType initialization, URLType representationIndex, Long timescale, Long presentationTimeOffset, String indexRange, Boolean indexRangeExact, Double availabilityTimeOffset, Boolean availabilityTimeComplete) {[m
+         this.initialization = initialization;[m
+         this.representationIndex = representationIndex;[m
+[36m@@ -38,6 +41,22 @@[m [mpublic class SegmentBase {[m
+         this.indexRangeExact = indexRangeExact;[m
+         this.availabilityTimeOffset = availabilityTimeOffset;[m
+         this.availabilityTimeComplete = availabilityTimeComplete;[m
+[32m+[m[32m        this.presentationDuration = null;[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    public SegmentBase(URLType initialization, URLType representationIndex, Long timescale,[m
+[32m+[m[32m        Long presentationTimeOffset, String indexRange, Boolean indexRangeExact,[m
+[32m+[m[32m        Double availabilityTimeOffset, Boolean availabilityTimeComplete,[m
+[32m+[m[32m        String presentationDuration) {[m
+[32m+[m[32m        this.initialization = initialization;[m
+[32m+[m[32m        this.representationIndex = representationIndex;[m
+[32m+[m[32m        this.timescale = timescale;[m
+[32m+[m[32m        this.presentationTimeOffset = presentationTimeOffset;[m
+[32m+[m[32m        this.indexRange = indexRange;[m
+[32m+[m[32m        this.indexRangeExact = indexRangeExact;[m
+[32m+[m[32m        this.availabilityTimeOffset = availabilityTimeOffset;[m
+[32m+[m[32m        this.availabilityTimeComplete = availabilityTimeComplete;[m
+[32m+[m[32m        this.presentationDuration = presentationDuration;[m
+     }[m
+ [m
+     @SuppressWarnings("unused")[m
+[36m@@ -50,6 +69,7 @@[m [mpublic class SegmentBase {[m
+         this.indexRangeExact = null;[m
+         this.availabilityTimeOffset = null;[m
+         this.availabilityTimeComplete = null;[m
+[32m+[m[32m        this.presentationDuration = null;[m
+     }[m
+ [m
+     public URLType getInitialization() {[m
+[36m@@ -84,6 +104,10 @@[m [mpublic class SegmentBase {[m
+         return availabilityTimeComplete;[m
+     }[m
+ [m
+[32m+[m[32m    public String getPresentationDuration() {[m
+[32m+[m[32m        return presentationDuration;[m
+[32m+[m[32m    }[m
+[32m+[m
+     @Override[m
+     public boolean equals(Object o) {[m
+         if (this == o) return true;[m
+[36m@@ -132,7 +156,7 @@[m [mpublic class SegmentBase {[m
+                 .withAvailabilityTimeOffset(availabilityTimeOffset)[m
+                 .withAvailabilityTimeComplete(availabilityTimeComplete);[m
+     }[m
+[31m-[m
+[32m+[m[41m    [m
+     static abstract class AbstractBuilder<T> {[m
+         URLType initialization;[m
+         URLType representationIndex;[m
+[36m@@ -182,14 +206,10 @@[m [mpublic class SegmentBase {[m
+             this.availabilityTimeComplete = availabilityTimeComplete;[m
+             return getThis();[m
+         }[m
+[31m-[m
+[32m+[m[41m        [m
+         abstract T getThis();[m
+     }[m
+ [m
+[31m-    public static Builder builder() {[m
+[31m-        return new Builder();[m
+[31m-    }[m
+[31m-[m
+     public static class Builder extends AbstractBuilder<Builder> {[m
+         public SegmentBase build() {[m
+             return new SegmentBase(initialization, representationIndex, timescale, presentationTimeOffset, indexRange, indexRangeExact, availabilityTimeOffset, availabilityTimeComplete);[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/data/SegmentList.java b/parser/src/main/java/io/lindstrom/mpd/data/SegmentList.java[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mindex 36a7232..691ff12[m
+[1m--- a/parser/src/main/java/io/lindstrom/mpd/data/SegmentList.java[m
+[1m+++ b/parser/src/main/java/io/lindstrom/mpd/data/SegmentList.java[m
+[36m@@ -1,59 +1,60 @@[m
+ package io.lindstrom.mpd.data;[m
+ [m
+ import com.fasterxml.jackson.annotation.JsonInclude;[m
+[31m-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;[m
+[31m-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;[m
+ import io.lindstrom.mpd.support.Utils;[m
+ [m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlAttribute;[m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlElement;[m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlElementWrapper;[m
+ import java.util.List;[m
+ import java.util.Objects;[m
+ [m
+ public class SegmentList {[m
+[31m-    @JacksonXmlProperty(localName = "Initialization", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "Initialization", namespace = MPD.NAMESPACE)[m
+     private final URLType initialization;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "RepresentationIndex", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "RepresentationIndex", namespace = MPD.NAMESPACE)[m
+     private final URLType representationIndex;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "S", namespace = MPD.NAMESPACE)[m
+[31m-    @JacksonXmlElementWrapper(localName = "SegmentTimeline", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "S", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElementWrapper(name = "SegmentTimeline", namespace = MPD.NAMESPACE)[m
+     @JsonInclude(value = JsonInclude.Include.NON_EMPTY)[m
+     private final List<Segment> segmentTimeline;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "BitstreamSwitching", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "BitstreamSwitching", namespace = MPD.NAMESPACE)[m
+     private final URLType bitstreamswitchingElement;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "SegmentURL", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "SegmentURL", namespace = MPD.NAMESPACE)[m
+     private final List<SegmentURL> segmentURLs;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "duration")[m
+     private final Long duration;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "startNumber")[m
+     private final Long startNumber;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true, namespace = "http://www.w3.org/1999/xlink")[m
+[32m+[m[32m    @XmlAttribute(name = "href", namespace = "http://www.w3.org/1999/xlink")[m
+     private final String href;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true, namespace = "http://www.w3.org/1999/xlink")[m
+[32m+[m[32m    @XmlAttribute(name = "actuate", namespace = "http://www.w3.org/1999/xlink")[m
+     private final ActuateType actuate;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "timescale")[m
+     private final Long timescale;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "presentationTimeOffset")[m
+     private final Long presentationTimeOffset;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "indexRange")[m
+     private final String indexRange;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "indexRangeExact")[m
+     private final Boolean indexRangeExact;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "availabilityTimeOffset")[m
+     private final Double availabilityTimeOffset;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "availabilityTimeComplete")[m
+     private final Boolean availabilityTimeComplete;[m
+ [m
+     private SegmentList(URLType initialization, URLType representationIndex, List<Segment> segmentTimeline, URLType bitstreamswitchingElement, List<SegmentURL> segmentURLs, Long duration, Long startNumber, String href, ActuateType actuate, Long timescale, Long presentationTimeOffset, String indexRange, Boolean indexRangeExact, Double availabilityTimeOffset, Boolean availabilityTimeComplete) {[m
+[36m@@ -220,10 +221,6 @@[m [mpublic class SegmentList {[m
+             .withAvailabilityTimeComplete(availabilityTimeComplete);[m
+     }[m
+ [m
+[31m-    public static Builder builder() {[m
+[31m-        return new Builder();[m
+[31m-    }[m
+[31m-[m
+     public static class Builder {[m
+         private URLType initialization;[m
+         private URLType representationIndex;[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/data/SegmentTemplate.java b/parser/src/main/java/io/lindstrom/mpd/data/SegmentTemplate.java[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mindex a44547c..3e3eda4[m
+[1m--- a/parser/src/main/java/io/lindstrom/mpd/data/SegmentTemplate.java[m
+[1m+++ b/parser/src/main/java/io/lindstrom/mpd/data/SegmentTemplate.java[m
+[36m@@ -1,16 +1,16 @@[m
+ package io.lindstrom.mpd.data;[m
+ [m
+ import com.fasterxml.jackson.annotation.JsonInclude;[m
+[31m-import com.fasterxml.jackson.annotation.JsonPropertyOrder;[m
+[31m-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;[m
+[31m-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;[m
+ import io.lindstrom.mpd.support.Utils;[m
+ [m
+[31m-import java.util.Arrays;[m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlAttribute;[m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlElement;[m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlElementWrapper;[m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlType;[m
+ import java.util.List;[m
+ import java.util.Objects;[m
+ [m
+[31m-@JsonPropertyOrder({[m
+[32m+[m[32m@XmlType(propOrder = {[m
+         "initialization",[m
+         "media",[m
+         "startNumber",[m
+[36m@@ -23,54 +23,54 @@[m [mimport java.util.Objects;[m
+         "BitstreamSwitching"[m
+ })[m
+ public class SegmentTemplate {[m
+[31m-    @JacksonXmlProperty(localName = "S", namespace = MPD.NAMESPACE)[m
+[31m-    @JacksonXmlElementWrapper(localName = "SegmentTimeline", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "S", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElementWrapper(name = "SegmentTimeline", namespace = MPD.NAMESPACE)[m
+     @JsonInclude(value = JsonInclude.Include.NON_EMPTY)[m
+     private final List<Segment> segmentTimeline;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "BitstreamSwitching", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "BitstreamSwitching", namespace = MPD.NAMESPACE)[m
+     private final URLType bitstreamswitchingElement;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "Initialization", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "Initialization", namespace = MPD.NAMESPACE)[m
+     private final URLType initializationElement;[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "RepresentationIndex", namespace = MPD.NAMESPACE)[m
+[32m+[m[32m    @XmlElement(name = "RepresentationIndex", namespace = MPD.NAMESPACE)[m
+     private final URLType representationIndex;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "media")[m
+     private final String media;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "index")[m
+     private final String index;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "initialization")[m
+     private final String initialization;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "bitstreamSwitching")[m
+     private final String bitstreamSwitching;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "duration")[m
+     private final Long duration;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "startNumber")[m
+     private final Long startNumber;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "timescale")[m
+     private final Long timescale;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "presentationTimeOffset")[m
+     private final Long presentationTimeOffset;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "indexRange")[m
+     private final String indexRange;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "indexRangeExact")[m
+     private final Boolean indexRangeExact;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "availabilityTimeOffset")[m
+     private final Double availabilityTimeOffset;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "availabilityTimeComplete")[m
+     private final Boolean availabilityTimeComplete;[m
+ [m
+     private SegmentTemplate(List<Segment> segmentTimeline, URLType bitstreamswitchingElement, URLType initializationElement, URLType representationIndex, String media, String index, String initialization, String bitstreamSwitching, Long duration, Long startNumber, Long timescale, Long presentationTimeOffset, String indexRange, Boolean indexRangeExact, Double availabilityTimeOffset, Boolean availabilityTimeComplete) {[m
+[36m@@ -244,10 +244,7 @@[m [mpublic class SegmentTemplate {[m
+             .withIndexRangeExact(indexRangeExact)[m
+             .withAvailabilityTimeOffset(availabilityTimeOffset)[m
+             .withAvailabilityTimeComplete(availabilityTimeComplete);[m
+[31m-    }[m
+ [m
+[31m-    public static Builder builder() {[m
+[31m-        return new Builder();[m
+     }[m
+ [m
+     public static class Builder {[m
+[36m@@ -273,11 +270,6 @@[m [mpublic class SegmentTemplate {[m
+             return this;[m
+         }[m
+ [m
+[31m-        public Builder withSegmentTimeline(Segment ...segment) {[m
+[31m-            this.segmentTimeline = Arrays.asList(segment);[m
+[31m-            return this;[m
+[31m-        }[m
+[31m-[m
+         public Builder withBitstreamswitchingElement(URLType bitstreamswitchingElement) {[m
+             this.bitstreamswitchingElement = bitstreamswitchingElement;[m
+             return this;[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/data/SegmentURL.java b/parser/src/main/java/io/lindstrom/mpd/data/SegmentURL.java[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mindex 65f56cf..8f6be7f[m
+[1m--- a/parser/src/main/java/io/lindstrom/mpd/data/SegmentURL.java[m
+[1m+++ b/parser/src/main/java/io/lindstrom/mpd/data/SegmentURL.java[m
+[36m@@ -1,21 +1,20 @@[m
+ package io.lindstrom.mpd.data;[m
+ [m
+[31m-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;[m
+[31m-[m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlAttribute;[m
+ import java.util.Objects;[m
+ [m
+ [m
+ public class SegmentURL {[m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "media")[m
+     private final String media;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "mediaRange")[m
+     private final String mediaRange;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "index")[m
+     private final String index;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "indexRange")[m
+     private final String indexRange;[m
+ [m
+     private SegmentURL(String media, String mediaRange, String index, String indexRange) {[m
+[36m@@ -83,10 +82,6 @@[m [mpublic class SegmentURL {[m
+                 .withIndexRange(indexRange);[m
+     }[m
+ [m
+[31m-    public static Builder builder() {[m
+[31m-        return new Builder();[m
+[31m-    }[m
+[31m-[m
+     public static class Builder {[m
+         private String media;[m
+         private String mediaRange;[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/data/SubRepresentation.java b/parser/src/main/java/io/lindstrom/mpd/data/SubRepresentation.java[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mindex 83482b2..a78e3e4[m
+[1m--- a/parser/src/main/java/io/lindstrom/mpd/data/SubRepresentation.java[m
+[1m+++ b/parser/src/main/java/io/lindstrom/mpd/data/SubRepresentation.java[m
+[36m@@ -1,22 +1,22 @@[m
+ package io.lindstrom.mpd.data;[m
+ [m
+[31m-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;[m
+ import io.lindstrom.mpd.data.descriptor.Descriptor;[m
+ [m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlAttribute;[m
+ import java.util.List;[m
+ import java.util.Objects;[m
+ [m
+ public class SubRepresentation extends RepresentationBase {[m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "level")[m
+     private final Long level;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "dependencyLevel")[m
+     private final String dependencyLevel;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "bandwidth")[m
+     private final Long bandwidth;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "contentComponent")[m
+     private final String contentComponent;[m
+ [m
+     private SubRepresentation(List<Descriptor> framePackings, List<Descriptor> audioChannelConfigurations, List<Descriptor> contentProtections, List<Descriptor> essentialProperties, List<Descriptor> supplementalProperties, List<EventStream> inbandEventStreams, String profiles, Long width, Long height, Ratio sar, FrameRate frameRate, String audioSamplingRate, String mimeType, String segmentProfiles, String codecs, Double maximumSAPPeriod, Long startWithSAP, Double maxPlayoutRate, Boolean codingDependency, VideoScanType scanType, Long level, String dependencyLevel, Long bandwidth, String contentComponent) {[m
+[36m@@ -87,10 +87,6 @@[m [mpublic class SubRepresentation extends RepresentationBase {[m
+                 .withContentComponent(contentComponent));[m
+     }[m
+ [m
+[31m-    public static Builder builder() {[m
+[31m-        return new Builder();[m
+[31m-    }[m
+[31m-[m
+     public static class Builder extends RepresentationBase.AbstractBuilder<Builder> {[m
+         private Long level;[m
+         private String dependencyLevel;[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/data/Subset.java b/parser/src/main/java/io/lindstrom/mpd/data/Subset.java[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mindex b9a31ad..75906b8[m
+[1m--- a/parser/src/main/java/io/lindstrom/mpd/data/Subset.java[m
+[1m+++ b/parser/src/main/java/io/lindstrom/mpd/data/Subset.java[m
+[36m@@ -1,14 +1,13 @@[m
+ package io.lindstrom.mpd.data;[m
+ [m
+[31m-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;[m
+[31m-[m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlAttribute;[m
+ import java.util.Objects;[m
+ [m
+ public class Subset {[m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "contains", required = true)[m
+     private final String contains;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "id")[m
+     private final String id;[m
+ [m
+     private Subset(String contains, String id) {[m
+[36m@@ -58,10 +57,6 @@[m [mpublic class Subset {[m
+                 .withId(id);[m
+     }[m
+ [m
+[31m-    public static Builder builder() {[m
+[31m-        return new Builder();[m
+[31m-    }[m
+[31m-[m
+     public static class Builder {[m
+         private String contains;[m
+         private String id;[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/data/URLType.java b/parser/src/main/java/io/lindstrom/mpd/data/URLType.java[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mindex 60bb889..c1f01d2[m
+[1m--- a/parser/src/main/java/io/lindstrom/mpd/data/URLType.java[m
+[1m+++ b/parser/src/main/java/io/lindstrom/mpd/data/URLType.java[m
+[36m@@ -1,14 +1,13 @@[m
+ package io.lindstrom.mpd.data;[m
+ [m
+[31m-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;[m
+[31m-[m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlAttribute;[m
+ import java.util.Objects;[m
+ [m
+ public class URLType {[m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "sourceURL")[m
+     private final String sourceURL;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "range")[m
+     private final String range;[m
+ [m
+     private URLType(String sourceURL, String range) {[m
+[36m@@ -58,10 +57,6 @@[m [mpublic class URLType {[m
+                 .withRange(range);[m
+     }[m
+ [m
+[31m-    public static Builder builder() {[m
+[31m-        return new Builder();[m
+[31m-    }[m
+[31m-[m
+     public static class Builder {[m
+         private String sourceURL;[m
+         private String range;[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/data/UTCTiming.java b/parser/src/main/java/io/lindstrom/mpd/data/UTCTiming.java[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mindex dd58112..4717397[m
+[1m--- a/parser/src/main/java/io/lindstrom/mpd/data/UTCTiming.java[m
+[1m+++ b/parser/src/main/java/io/lindstrom/mpd/data/UTCTiming.java[m
+[36m@@ -1,18 +1,18 @@[m
+ package io.lindstrom.mpd.data;[m
+ [m
+ import com.fasterxml.jackson.annotation.JsonProperty;[m
+[31m-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;[m
+ [m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlAttribute;[m
+ import java.util.Objects;[m
+ [m
+ public class UTCTiming {[m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "schemeIdUri", required = true)[m
+     private final Type schemeIdUri;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true, localName = "value")[m
+[32m+[m[32m    @XmlAttribute(name = "value")[m
+     private final String value;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "id")[m
+     private final String id;[m
+ [m
+     private UTCTiming(Type schemeIdUri, String value, String id) {[m
+[36m@@ -70,10 +70,6 @@[m [mpublic class UTCTiming {[m
+                 .withId(id);[m
+     }[m
+ [m
+[31m-    public static Builder builder() {[m
+[31m-        return new Builder();[m
+[31m-    }[m
+[31m-[m
+     public static class Builder {[m
+         private Type schemeIdUri;[m
+         private String value;[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/data/VideoScanType.java b/parser/src/main/java/io/lindstrom/mpd/data/VideoScanType.java[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/data/descriptor/Descriptor.java b/parser/src/main/java/io/lindstrom/mpd/data/descriptor/Descriptor.java[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mindex 0dc0b64..33bf497[m
+[1m--- a/parser/src/main/java/io/lindstrom/mpd/data/descriptor/Descriptor.java[m
+[1m+++ b/parser/src/main/java/io/lindstrom/mpd/data/descriptor/Descriptor.java[m
+[36m@@ -3,11 +3,8 @@[m [mpackage io.lindstrom.mpd.data.descriptor;[m
+ import com.fasterxml.jackson.annotation.JsonIgnore;[m
+ import com.fasterxml.jackson.annotation.JsonSubTypes;[m
+ import com.fasterxml.jackson.annotation.JsonTypeInfo;[m
+[31m-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;[m
+[31m-import io.lindstrom.mpd.data.descriptor.protection.Mp4Protection;[m
+[31m-import io.lindstrom.mpd.data.descriptor.protection.PlayReadyContentProtection;[m
+[31m-import io.lindstrom.mpd.data.descriptor.protection.WidewineProtection;[m
+ [m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlAttribute;[m
+ import java.util.Objects;[m
+ [m
+ @JsonTypeInfo([m
+[36m@@ -17,21 +14,33 @@[m [mimport java.util.Objects;[m
+         visible = true,[m
+         defaultImpl = GenericDescriptor.class)[m
+ @JsonSubTypes({[m
+[31m-        @JsonSubTypes.Type(value = Role.class, name = Role.SCHEME_ID_URI),[m
+[31m-        @JsonSubTypes.Type(value = Mp4Protection.class, name = Mp4Protection.SCHEME_ID_URI),[m
+[31m-        @JsonSubTypes.Type(value = PlayReadyContentProtection.class, name = PlayReadyContentProtection.SCHEME_ID_URI),[m
+[31m-        @JsonSubTypes.Type(value = WidewineProtection.class, name = WidewineProtection.SCHEME_ID_URI)[m
+[31m-})[m
+[32m+[m[32m        @JsonSubTypes.Type(value = Role.class, name = Role.SCHEME_ID_URI)}[m
+[32m+[m[32m)[m
+ public abstract class Descriptor {[m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "schemeIdUri")[m
+     protected final String schemeIdUri;[m
+ [m
+[31m-    @JacksonXmlProperty(isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "id")[m
+     protected final String id;[m
+ [m
+[32m+[m[32m    @XmlAttribute(name = "reportingUrl")[m
+[32m+[m[32m    protected final String reportingUrl;[m
+[32m+[m
+[32m+[m[32m    @XmlAttribute(name = "probability")[m
+[32m+[m[32m    protected final String probability;[m
+[32m+[m
+     protected Descriptor(String schemeIdUri, String id) {[m
+         this.schemeIdUri = schemeIdUri;[m
+         this.id = id;[m
+[32m+[m[32m        this.reportingUrl = null;[m
+[32m+[m[32m        this.probability = null;[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    protected Descriptor(String schemeIdUri, String id, String reportingUrl, String probability) {[m
+[32m+[m[32m        this.schemeIdUri = schemeIdUri;[m
+[32m+[m[32m        this.id = id;[m
+[32m+[m[32m        this.reportingUrl = reportingUrl;[m
+[32m+[m[32m        this.probability = probability;[m
+     }[m
+ [m
+     public String getSchemeIdUri() {[m
+[36m@@ -42,20 +51,24 @@[m [mpublic abstract class Descriptor {[m
+         return id;[m
+     }[m
+ [m
+[32m+[m[32m    public String getReportingUrl() {[m
+[32m+[m[32m        return reportingUrl;[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    public String getProbability() {[m
+[32m+[m[32m        return probability;[m
+[32m+[m[32m    }[m
+[32m+[m
+     @JsonIgnore[m
+     public abstract String getValue();[m
+ [m
+     @Override[m
+[31m-    public boolean equals(Object o) {[m
+[31m-        if (this == o) return true;[m
+[31m-        if (!(o instanceof Descriptor)) return false;[m
+[31m-        Descriptor that = (Descriptor) o;[m
+[31m-        return Objects.equals(schemeIdUri, that.schemeIdUri) &&[m
+[31m-                Objects.equals(id, that.id);[m
+[32m+[m[32m    public int hashCode() {[m
+[32m+[m[32m        return super.hashCode();[m
+     }[m
+ [m
+     @Override[m
+[31m-    public int hashCode() {[m
+[31m-        return Objects.hash(schemeIdUri, id);[m
+[32m+[m[32m    public boolean equals(Object obj) {[m
+[32m+[m[32m        return super.equals(obj);[m
+     }[m
+ }[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/data/descriptor/GenericDescriptor.java b/parser/src/main/java/io/lindstrom/mpd/data/descriptor/GenericDescriptor.java[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mindex 181ace3..c1f9e3e[m
+[1m--- a/parser/src/main/java/io/lindstrom/mpd/data/descriptor/GenericDescriptor.java[m
+[1m+++ b/parser/src/main/java/io/lindstrom/mpd/data/descriptor/GenericDescriptor.java[m
+[36m@@ -1,11 +1,10 @@[m
+ package io.lindstrom.mpd.data.descriptor;[m
+ [m
+[31m-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;[m
+[31m-[m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlAttribute;[m
+ import java.util.Objects;[m
+ [m
+ public class GenericDescriptor extends Descriptor {[m
+[31m-    @JacksonXmlProperty(isAttribute = true, localName = "value")[m
+[32m+[m[32m    @XmlAttribute(name = "value")[m
+     private final String value;[m
+ [m
+     public GenericDescriptor(String schemeIdUri, String value, String id) {[m
+[36m@@ -50,40 +49,4 @@[m [mpublic class GenericDescriptor extends Descriptor {[m
+                 ", id='" + id + '\'' +[m
+                 '}';[m
+     }[m
+[31m-[m
+[31m-    public Builder buildUpon() {[m
+[31m-        return new Builder()[m
+[31m-                .withId(id)[m
+[31m-                .withSchemeIdUri(schemeIdUri)[m
+[31m-                .withValue(value);[m
+[31m-    }[m
+[31m-[m
+[31m-    public static Builder builder() {[m
+[31m-        return new Builder();[m
+[31m-    }[m
+[31m-[m
+[31m-    public static class Builder {[m
+[31m-        private String value;[m
+[31m-        private String schemeIdUri;[m
+[31m-        private String id;[m
+[31m-[m
+[31m-        public Builder withValue(String value) {[m
+[31m-            this.value = value;[m
+[31m-            return this;[m
+[31m-        }[m
+[31m-[m
+[31m-        public Builder withSchemeIdUri(String schemeIdUri) {[m
+[31m-            this.schemeIdUri = schemeIdUri;[m
+[31m-            return this;[m
+[31m-        }[m
+[31m-[m
+[31m-        public Builder withId(String id) {[m
+[31m-            this.id = id;[m
+[31m-            return this;[m
+[31m-        }[m
+[31m-[m
+[31m-        public GenericDescriptor build() {[m
+[31m-            return new GenericDescriptor(schemeIdUri, value, id);[m
+[31m-        }[m
+[31m-    }[m
+ }[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/data/descriptor/Role.java b/parser/src/main/java/io/lindstrom/mpd/data/descriptor/Role.java[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mindex b48d54c..d852221[m
+[1m--- a/parser/src/main/java/io/lindstrom/mpd/data/descriptor/Role.java[m
+[1m+++ b/parser/src/main/java/io/lindstrom/mpd/data/descriptor/Role.java[m
+[36m@@ -3,15 +3,14 @@[m [mpackage io.lindstrom.mpd.data.descriptor;[m
+ [m
+ import com.fasterxml.jackson.annotation.JsonEnumDefaultValue;[m
+ import com.fasterxml.jackson.annotation.JsonProperty;[m
+[31m-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;[m
+ [m
+[31m-import java.util.Locale;[m
+[32m+[m[32mimport javax.xml.bind.annotation.XmlAttribute;[m
+ import java.util.Objects;[m
+ [m
+ public class Role extends Descriptor {[m
+     static final String SCHEME_ID_URI = "urn:mpeg:dash:role:2011";[m
+ [m
+[31m-    @JacksonXmlProperty(localName = "value", isAttribute = true)[m
+[32m+[m[32m    @XmlAttribute(name = "value")[m
+     private final Type type;[m
+ [m
+     public Role(Type value) {[m
+[36m@@ -35,7 +34,7 @@[m [mpublic class Role extends Descriptor {[m
+         if (type == null) {[m
+             return null;[m
+         } else {[m
+[31m-            return type.toString().toLowerCase(Locale.US);[m
+[32m+[m[32m            return type.toString().toLowerCase();[m
+         }[m
+     }[m
+ [m
+[36m@@ -76,33 +75,4 @@[m [mpublic class Role extends Descriptor {[m
+                 ", id='" + id + '\'' +[m
+                 '}';[m
+     }[m
+[31m-[m
+[31m-    public Builder buildUpon() {[m
+[31m-        return new Builder()[m
+[31m-                .withId(id)[m
+[31m-                .withType(type);[m
+[31m-    }[m
+[31m-[m
+[31m-    public static Builder builder() {[m
+[31m-        return new Builder();[m
+[31m-    }[m
+[31m-[m
+[31m-    public static class Builder {[m
+[31m-        private Type type;[m
+[31m-        private String id;[m
+[31m-[m
+[31m-        public Builder withType(Type type) {[m
+[31m-            this.type = type;[m
+[31m-            return this;[m
+[31m-        }[m
+[31m-[m
+[31m-        public Builder withId(String id) {[m
+[31m-            this.id = id;[m
+[31m-            return this;[m
+[31m-        }[m
+[31m-[m
+[31m-        public Role build() {[m
+[31m-            return new Role(type, id);[m
+[31m-        }[m
+[31m-    }[m
+ }[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/data/descriptor/protection/Mp4Protection.java b/parser/src/main/java/io/lindstrom/mpd/data/descriptor/protection/Mp4Protection.java[m
+[1mdeleted file mode 100644[m
+[1mindex 6788e7d..0000000[m
+[1m--- a/parser/src/main/java/io/lindstrom/mpd/data/descriptor/protection/Mp4Protection.java[m
+[1m+++ /dev/null[m
+[36m@@ -1,90 +0,0 @@[m
+[31m-package io.lindstrom.mpd.data.descriptor.protection;[m
+[31m-[m
+[31m-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;[m
+[31m-import io.lindstrom.mpd.data.descriptor.Descriptor;[m
+[31m-[m
+[31m-import java.util.Objects;[m
+[31m-[m
+[31m-public class Mp4Protection extends Descriptor {[m
+[31m-    public static final String SCHEME_ID_URI = "urn:mpeg:dash:mp4protection:2011";[m
+[31m-[m
+[31m-    @JacksonXmlProperty(isAttribute = true, localName = "default_KID", namespace = "urn:mpeg:cenc:2013")[m
+[31m-    private final String defaultKID;[m
+[31m-[m
+[31m-    @JacksonXmlProperty(isAttribute = true, localName = "value")[m
+[31m-    private final String value;[m
+[31m-[m
+[31m-    public Mp4Protection(String value, String defaultKID) {[m
+[31m-        super(SCHEME_ID_URI, null);[m
+[31m-        this.value = value;[m
+[31m-        this.defaultKID = defaultKID;[m
+[31m-    }[m
+[31m-[m
+[31m-    @SuppressWarnings("unused")[m
+[31m-    private Mp4Protection() {[m
+[31m-        super(null, null);[m
+[31m-        this.defaultKID = null;[m
+[31m-        this.value = null;[m
+[31m-    }[m
+[31m-[m
+[31m-    @Override[m
+[31m-    public String getValue() {[m
+[31m-        return value;[m
+[31m-    }[m
+[31m-[m
+[31m-    public String getDefaultKID() {[m
+[31m-        return defaultKID;[m
+[31m-    }[m
+[31m-[m
+[31m-    @Override[m
+[31m-    public String toString() {[m
+[31m-        return "Mp4Protection{" +[m
+[31m-                "defaultKID='" + defaultKID + '\'' +[m
+[31m-                ", value='" + value + '\'' +[m
+[31m-                '}';[m
+[31m-    }[m
+[31m-[m
+[31m-    @Override[m
+[31m-    public boolean equals(Object o) {[m
+[31m-        if (this == o) return true;[m
+[31m-        if (o == null || getClass() != o.getClass()) return false;[m
+[31m-        if (!super.equals(o)) return false;[m
+[31m-        Mp4Protection that = (Mp4Protection) o;[m
+[31m-        return Objects.equals(defaultKID, that.defaultKID) &&[m
+[31m-                Objects.equals(value, that.value);[m
+[31m-    }[m
+[31m-[m
+[31m-    @Override[m
+[31m-    public int hashCode() {[m
+[31m-        return Objects.hash(super.hashCode(), defaultKID, value);[m
+[31m-    }[m
+[31m-[m
+[31m-    public Builder buildUpon() {[m
+[31m-        return new Builder()[m
+[31m-                .withDefaultKID(defaultKID)[m
+[31m-                .withValue(value);[m
+[31m-    }[m
+[31m-[m
+[31m-    public static Builder builder() {[m
+[31m-        return new Builder();[m
+[31m-    }[m
+[31m-[m
+[31m-    public static class Builder {[m
+[31m-        private String defaultKID;[m
+[31m-        private String value;[m
+[31m-[m
+[31m-        public Builder withDefaultKID(String defaultKID) {[m
+[31m-            this.defaultKID = defaultKID;[m
+[31m-            return this;[m
+[31m-        }[m
+[31m-[m
+[31m-        public Builder withValue(String value) {[m
+[31m-            this.value = value;[m
+[31m-            return this;[m
+[31m-        }[m
+[31m-[m
+[31m-        public Mp4Protection build() {[m
+[31m-            return new Mp4Protection(value, defaultKID);[m
+[31m-        }[m
+[31m-    }[m
+[31m-}[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/data/descriptor/protection/PlayReadyContentProtection.java b/parser/src/main/java/io/lindstrom/mpd/data/descriptor/protection/PlayReadyContentProtection.java[m
+[1mdeleted file mode 100644[m
+[1mindex 822acd1..0000000[m
+[1m--- a/parser/src/main/java/io/lindstrom/mpd/data/descriptor/protection/PlayReadyContentProtection.java[m
+[1m+++ /dev/null[m
+[36m@@ -1,126 +0,0 @@[m
+[31m-package io.lindstrom.mpd.data.descriptor.protection;[m
+[31m-[m
+[31m-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;[m
+[31m-import io.lindstrom.mpd.data.descriptor.Descriptor;[m
+[31m-[m
+[31m-import java.util.Objects;[m
+[31m-[m
+[31m-public class PlayReadyContentProtection extends Descriptor {[m
+[31m-    public static final String SCHEME_ID_URI = "urn:uuid:9a04f079-9840-4286-ab92-e65be0885f95";[m
+[31m-[m
+[31m-    @JacksonXmlProperty(isAttribute = true, localName = "value")[m
+[31m-    private final String value;[m
+[31m-[m
+[31m-    @JacksonXmlProperty(isAttribute = true, localName = "default_KID", namespace = "urn:mpeg:cenc:2013")[m
+[31m-    private final String defaultKID;[m
+[31m-[m
+[31m-    @JacksonXmlProperty(namespace = "urn:mpeg:cenc:2013")[m
+[31m-    private final String pssh;[m
+[31m-[m
+[31m-    @JacksonXmlProperty(namespace = "urn:microsoft:playready")[m
+[31m-    private final String pro;[m
+[31m-[m
+[31m-    public PlayReadyContentProtection(String value, String defaultKID, String pssh, String pro) {[m
+[31m-        super(SCHEME_ID_URI, null);[m
+[31m-        this.value = value;[m
+[31m-        this.defaultKID = defaultKID;[m
+[31m-        this.pssh = pssh;[m
+[31m-        this.pro = pro;[m
+[31m-    }[m
+[31m-[m
+[31m-    @SuppressWarnings("unused")[m
+[31m-    private PlayReadyContentProtection() {[m
+[31m-        super(null, null);[m
+[31m-        this.value = null;[m
+[31m-        this.defaultKID = null;[m
+[31m-        this.pssh = null;[m
+[31m-        this.pro = null;[m
+[31m-    }[m
+[31m-[m
+[31m-    @Override[m
+[31m-    public String getValue() {[m
+[31m-        return value;[m
+[31m-    }[m
+[31m-[m
+[31m-    public String getDefaultKID() {[m
+[31m-        return defaultKID;[m
+[31m-    }[m
+[31m-[m
+[31m-    public String getPssh() {[m
+[31m-        return pssh;[m
+[31m-    }[m
+[31m-[m
+[31m-    public String getPro() {[m
+[31m-        return pro;[m
+[31m-    }[m
+[31m-[m
+[31m-    @Override[m
+[31m-    public boolean equals(Object o) {[m
+[31m-        if (this == o) return true;[m
+[31m-        if (o == null || getClass() != o.getClass()) return false;[m
+[31m-        if (!super.equals(o)) return false;[m
+[31m-        PlayReadyContentProtection that = (PlayReadyContentProtection) o;[m
+[31m-        return Objects.equals(value, that.value) &&[m
+[31m-                Objects.equals(defaultKID, that.defaultKID) &&[m
+[31m-                Objects.equals(pssh, that.pssh) &&[m
+[31m-                Objects.equals(pro, that.pro);[m
+[31m-    }[m
+[31m-[m
+[31m-    @Override[m
+[31m-    public int hashCode() {[m
+[31m-        return Objects.hash(super.hashCode(), value, defaultKID, pssh, pro);[m
+[31m-    }[m
+[31m-[m
+[31m-    @Override[m
+[31m-    public String toString() {[m
+[31m-        return "PlayReadyContentProtection{" +[m
+[31m-                "value='" + value + '\'' +[m
+[31m-                ", defaultKID='" + defaultKID + '\'' +[m
+[31m-                ", pssh='" + pssh + '\'' +[m
+[31m-                ", pro='" + pro + '\'' +[m
+[31m-                '}';[m
+[31m-    }[m
+[31m-[m
+[31m-    public Builder buildUpon() {[m
+[31m-        return new Builder()[m
+[31m-                .withValue(value)[m
+[31m-                .withDefaultKID(defaultKID)[m
+[31m-                .withPssh(pssh)[m
+[31m-                .withPro(pro);[m
+[31m-    }[m
+[31m-[m
+[31m-    public static Builder builder() {[m
+[31m-        return new Builder();[m
+[31m-    }[m
+[31m-[m
+[31m-    public static class Builder {[m
+[31m-        private String value;[m
+[31m-        private String defaultKID;[m
+[31m-        private String pssh;[m
+[31m-        private String pro;[m
+[31m-[m
+[31m-        public Builder withValue(String value) {[m
+[31m-            this.value = value;[m
+[31m-            return this;[m
+[31m-        }[m
+[31m-[m
+[31m-        public Builder withDefaultKID(String defaultKID) {[m
+[31m-            this.defaultKID = defaultKID;[m
+[31m-            return this;[m
+[31m-        }[m
+[31m-[m
+[31m-        public Builder withPssh(String pssh) {[m
+[31m-            this.pssh = pssh;[m
+[31m-            return this;[m
+[31m-        }[m
+[31m-[m
+[31m-        public Builder withPro(String pro) {[m
+[31m-            this.pro = pro;[m
+[31m-            return this;[m
+[31m-        }[m
+[31m-[m
+[31m-        public PlayReadyContentProtection build() {[m
+[31m-            return new PlayReadyContentProtection(value, defaultKID, pssh, pro);[m
+[31m-        }[m
+[31m-    }[m
+[31m-}[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/data/descriptor/protection/WidewineProtection.java b/parser/src/main/java/io/lindstrom/mpd/data/descriptor/protection/WidewineProtection.java[m
+[1mdeleted file mode 100644[m
+[1mindex 9d06535..0000000[m
+[1m--- a/parser/src/main/java/io/lindstrom/mpd/data/descriptor/protection/WidewineProtection.java[m
+[1m+++ /dev/null[m
+[36m@@ -1,90 +0,0 @@[m
+[31m-package io.lindstrom.mpd.data.descriptor.protection;[m
+[31m-[m
+[31m-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;[m
+[31m-import io.lindstrom.mpd.data.descriptor.Descriptor;[m
+[31m-[m
+[31m-import java.util.Objects;[m
+[31m-[m
+[31m-public class WidewineProtection extends Descriptor {[m
+[31m-    public static final String SCHEME_ID_URI = "urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed";[m
+[31m-[m
+[31m-    @JacksonXmlProperty(isAttribute = true, localName = "value")[m
+[31m-    private final String value;[m
+[31m-[m
+[31m-    @JacksonXmlProperty(namespace = "urn:mpeg:cenc:2013")[m
+[31m-    private final String pssh;[m
+[31m-[m
+[31m-    public WidewineProtection(String value, String pssh) {[m
+[31m-        super(SCHEME_ID_URI, null);[m
+[31m-        this.value = value;[m
+[31m-        this.pssh = pssh;[m
+[31m-    }[m
+[31m-[m
+[31m-    @SuppressWarnings("unused")[m
+[31m-    private WidewineProtection() {[m
+[31m-        super(null, null);[m
+[31m-        this.pssh = null;[m
+[31m-        this.value = null;[m
+[31m-    }[m
+[31m-[m
+[31m-    @Override[m
+[31m-    public String getValue() {[m
+[31m-        return value;[m
+[31m-    }[m
+[31m-[m
+[31m-    public String getPssh() {[m
+[31m-        return pssh;[m
+[31m-    }[m
+[31m-[m
+[31m-    @Override[m
+[31m-    public String toString() {[m
+[31m-        return "WidewineProtection{" +[m
+[31m-                "value='" + value + '\'' +[m
+[31m-                ", pssh='" + pssh + '\'' +[m
+[31m-                '}';[m
+[31m-    }[m
+[31m-[m
+[31m-    @Override[m
+[31m-    public boolean equals(Object o) {[m
+[31m-        if (this == o) return true;[m
+[31m-        if (o == null || getClass() != o.getClass()) return false;[m
+[31m-        if (!super.equals(o)) return false;[m
+[31m-        WidewineProtection that = (WidewineProtection) o;[m
+[31m-        return Objects.equals(value, that.value) &&[m
+[31m-                Objects.equals(pssh, that.pssh);[m
+[31m-    }[m
+[31m-[m
+[31m-    @Override[m
+[31m-    public int hashCode() {[m
+[31m-        return Objects.hash(super.hashCode(), value, pssh);[m
+[31m-    }[m
+[31m-[m
+[31m-    public Builder buildUpon() {[m
+[31m-        return new Builder()[m
+[31m-                .withPssh(pssh)[m
+[31m-                .withValue(value);[m
+[31m-    }[m
+[31m-[m
+[31m-    public static Builder builder() {[m
+[31m-        return new Builder();[m
+[31m-    }[m
+[31m-[m
+[31m-    public static class Builder {[m
+[31m-        private String value;[m
+[31m-        private String pssh;[m
+[31m-[m
+[31m-        public Builder withValue(String value) {[m
+[31m-            this.value = value;[m
+[31m-            return this;[m
+[31m-        }[m
+[31m-[m
+[31m-        public Builder withPssh(String pssh) {[m
+[31m-            this.pssh = pssh;[m
+[31m-            return this;[m
+[31m-        }[m
+[31m-[m
+[31m-        public WidewineProtection build() {[m
+[31m-            return new WidewineProtection(value, pssh);[m
+[31m-        }[m
+[31m-    }[m
+[31m-}[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/support/DurationDeserializer.java b/parser/src/main/java/io/lindstrom/mpd/support/DurationDeserializer.java[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mindex 97f08eb..9a48f53[m
+[1m--- a/parser/src/main/java/io/lindstrom/mpd/support/DurationDeserializer.java[m
+[1m+++ b/parser/src/main/java/io/lindstrom/mpd/support/DurationDeserializer.java[m
+[36m@@ -4,135 +4,31 @@[m [mimport com.fasterxml.jackson.core.JsonParser;[m
+ import com.fasterxml.jackson.databind.DeserializationContext;[m
+ import com.fasterxml.jackson.databind.JsonDeserializer;[m
+ [m
+[32m+[m[32mimport javax.xml.datatype.DatatypeConfigurationException;[m
+[32m+[m[32mimport javax.xml.datatype.DatatypeFactory;[m
+ import java.io.IOException;[m
+ import java.time.Duration;[m
+ import java.time.format.DateTimeParseException;[m
+[31m-import java.util.regex.Matcher;[m
+[31m-import java.util.regex.Pattern;[m
+[32m+[m[32mimport java.util.Date;[m
+ [m
+ public class DurationDeserializer extends JsonDeserializer<Duration> {[m
+[31m-    private static final int HOURS_PER_YEAR = 8766;[m
+[31m-    private static final int MINUTES_PER_MONTH = 43830;[m
+[31m-    private static final int HOURS_PER_DAY = 24;[m
+[31m-[m
+[31m-    // PnYnMnDTnHnMnS[m
+[31m-    private static final Pattern PATTERN =[m
+[31m-            Pattern.compile("([-+]?)P" +[m
+[31m-                            "(?:([-+]?[0-9]+)Y)?" +[m
+[31m-                            "(?:([-+]?[0-9]+)M)?" +[m
+[31m-                            "(?:([-+]?[0-9]+)D)?" +[m
+[31m-                            "(T(?:([-+]?[0-9]+)H)?(?:([-+]?[0-9]+)M)?(?:([-+]?[0-9]+)(?:[.,]([0-9]{0,12}))?S)?)?",[m
+[31m-                    Pattern.CASE_INSENSITIVE);[m
+[31m-[m
+[31m-    private static Duration estimateDuration(long years, long months, long days) {[m
+[31m-        if (years > 0 || months > 0 || days > 0) {[m
+[31m-            return Duration.ofHours(HOURS_PER_YEAR * years)[m
+[31m-                    .plusMinutes(MINUTES_PER_MONTH * months)[m
+[31m-                    .plusHours(HOURS_PER_DAY * days);[m
+[31m-        } else {[m
+[31m-            return Duration.ZERO;[m
+[31m-        }[m
+[31m-    }[m
+[31m-[m
+[31m-    private static boolean isNegative(CharSequence text, int start, int end) {[m
+[31m-        return (start >= 0 && end == start + 1 && text.charAt(start) == '-');[m
+[31m-    }[m
+[31m-[m
+[31m-    static long parseFraction(CharSequence text, int start, int end, boolean negate) {[m
+[31m-        // regex limits to [0-9]{0,12}[m
+[31m-        if (start < 0 || end < 0 || end - start == 0) {[m
+[31m-            return 0;[m
+[31m-        }[m
+[31m-[m
+[31m-        // Duration only handle nano second resolution but xs:duration allows 12 decimals.[m
+[31m-        if (end - start > 9) {[m
+[31m-            end = start + 9;[m
+[31m-        }[m
+[31m-[m
+[31m-        long fraction = Long.parseLong(text, start, end, 10);[m
+[31m-[m
+[31m-        // for number strings smaller than 9 digits, interpret as if there were trailing zeros[m
+[31m-        for (int i = end - start; i < 9; i++) {[m
+[31m-            fraction *= 10;[m
+[31m-        }[m
+[31m-[m
+[31m-        if (negate) {[m
+[31m-            return -fraction;[m
+[31m-        } else {[m
+[31m-            return fraction;[m
+[31m-        }[m
+[31m-    }[m
+[31m-[m
+[31m-[m
+[31m-    private Duration parse(String text) {[m
+[31m-        Matcher matcher = PATTERN.matcher(text);[m
+[31m-        if (!matcher.matches()) {[m
+[31m-            throw new DateTimeParseException("Text cannot be parsed to a Duration", text, 0);[m
+[31m-        }[m
+[31m-[m
+[31m-        boolean negate = isNegative(text, matcher.start(1), matcher.end(1));[m
+[31m-        int yearStart = matcher.start(2), yearEnd = matcher.end(2);[m
+[31m-        int monthStart = matcher.start(3), monthEnd = matcher.end(3);[m
+[31m-        int dayStart = matcher.start(4), dayEnd = matcher.end(4);[m
+[31m-        int hourStart = matcher.start(6), hourEnd = matcher.end(6);[m
+[31m-        int minuteStart = matcher.start(7), minuteEnd = matcher.end(7);[m
+[31m-        int secondStart = matcher.start(8), secondEnd = matcher.end(8);[m
+[31m-        int fractionStart = matcher.start(9), fractionEnd = matcher.end(9);[m
+[31m-[m
+[31m-        int years = 0;[m
+[31m-        int months = 0;[m
+[31m-        int days = 0;[m
+[31m-        long hoursAsSecs = 0;[m
+[31m-        long minutesAsSecs = 0;[m
+[31m-        long seconds = 0;[m
+[31m-        long nanos = 0;[m
+[31m-[m
+[31m-        if (yearStart >= 0) {[m
+[31m-            years = Integer.parseInt(text, yearStart, yearEnd, 10);[m
+[31m-        }[m
+[31m-[m
+[31m-        if (monthStart >= 0) {[m
+[31m-            months = Integer.parseInt(text, monthStart, monthEnd, 10);[m
+[31m-        }[m
+[31m-[m
+[31m-        if (dayStart >= 0) {[m
+[31m-            days = Integer.parseInt(text, dayStart, dayEnd, 10);[m
+[31m-        }[m
+[31m-[m
+[31m-        if (hourStart >= 0) {[m
+[31m-            hoursAsSecs = Math.multiplyExact(3600L, Integer.parseInt(text, hourStart, hourEnd, 10));[m
+[31m-        }[m
+[31m-[m
+[31m-        if (minuteStart >= 0) {[m
+[31m-            minutesAsSecs = Math.multiplyExact(60L, Integer.parseInt(text, minuteStart, minuteEnd, 10));[m
+[31m-        }[m
+[31m-[m
+[31m-        if (secondStart >= 0) {[m
+[31m-            seconds = Integer.parseInt(text, secondStart, secondEnd, 10);[m
+[31m-            boolean negativeSecs = text.charAt(secondStart) == '-';[m
+[31m-            nanos = parseFraction(text, fractionStart, fractionEnd, negativeSecs);[m
+[31m-        }[m
+[31m-[m
+[31m-        long secondsTotal = Math.addExact(hoursAsSecs, Math.addExact(minutesAsSecs, seconds));[m
+[31m-[m
+[31m-        Duration duration = Duration.ofSeconds(secondsTotal, nanos).plus(estimateDuration(years, months, days));[m
+[31m-[m
+[31m-        if (negate) {[m
+[31m-            return duration.negated();[m
+[31m-        }[m
+[31m-[m
+[31m-        return duration;[m
+[31m-    }[m
+[31m-[m
+[31m-[m
+     @Override[m
+     public Duration deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {[m
+         String text = p.getText();[m
+ [m
+         try {[m
+[31m-            return parse(text);[m
+[32m+[m[32m            return Duration.parse(text);[m
+[32m+[m[32m        } catch (DateTimeParseException e) {[m
+[32m+[m[32m            // ignore[m
+[32m+[m[32m        }[m
+[32m+[m
+[32m+[m[32m        // Fallback to javax.xml.datatype[m
+[32m+[m[32m        try {[m
+[32m+[m[32m            return Duration.ofMillis(DatatypeFactory.newInstance().newDuration(text).getTimeInMillis(new Date(0L)));[m
+[32m+[m[32m        } catch (DatatypeConfigurationException e) {[m
+[32m+[m[32m            throw new IOException(e);[m
+         } catch (Exception e) {[m
+[31m-            ctxt.reportWrongTokenException(this, p.currentToken(), "Text cannot be parsed to a Duration");[m
+[32m+[m[32m            ctxt.reportWrongTokenException(this, p.currentToken(), "Invalid duration");[m
+         }[m
+ [m
+         return null;[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/support/DurationSerializer.java b/parser/src/main/java/io/lindstrom/mpd/support/DurationSerializer.java[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/support/FrameRateDeserializer.java b/parser/src/main/java/io/lindstrom/mpd/support/FrameRateDeserializer.java[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/support/FrameRateSerializer.java b/parser/src/main/java/io/lindstrom/mpd/support/FrameRateSerializer.java[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/support/OffsetDateTimeDeserializer.java b/parser/src/main/java/io/lindstrom/mpd/support/OffsetDateTimeDeserializer.java[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/support/OffsetDateTimeSerializer.java b/parser/src/main/java/io/lindstrom/mpd/support/OffsetDateTimeSerializer.java[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/support/ProfilesDeserializer.java b/parser/src/main/java/io/lindstrom/mpd/support/ProfilesDeserializer.java[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/support/ProfilesSerializer.java b/parser/src/main/java/io/lindstrom/mpd/support/ProfilesSerializer.java[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/support/RatioDeserializer.java b/parser/src/main/java/io/lindstrom/mpd/support/RatioDeserializer.java[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/support/RatioSerializer.java b/parser/src/main/java/io/lindstrom/mpd/support/RatioSerializer.java[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mindex 1184711..de65b46[m
+[1m--- a/parser/src/main/java/io/lindstrom/mpd/support/RatioSerializer.java[m
+[1m+++ b/parser/src/main/java/io/lindstrom/mpd/support/RatioSerializer.java[m
+[36m@@ -15,7 +15,7 @@[m [mpublic class RatioSerializer extends JsonSerializer<Ratio> {[m
+         if (value.getA() != null) {[m
+             stringBuilder.append(value.getA());[m
+         }[m
+[31m-        stringBuilder.append(':');[m
+[32m+[m[32m        stringBuilder.append(":");[m
+         if (value.getB() != null) {[m
+             stringBuilder.append(value.getB());[m
+         }[m
+[1mdiff --git a/parser/src/main/java/io/lindstrom/mpd/support/Utils.java b/parser/src/main/java/io/lindstrom/mpd/support/Utils.java[m
+[1mold mode 100644[m
+[1mnew mode 100755[m
+[1mindex 38bbd80..c79b6b5[m
+[1m--- a/parser/src/main/java/io/lindstrom/mpd/support/Utils.java[m
+[1m+++ b/parser/src/main/java/io/lindstrom/mpd/support/Utils.java[m
+[36m@@ -1,7 +1,6 @@[m
+ package io.lindstrom.mpd.support;[m
+ [m
+ import java.util.ArrayList;[m
+[31m-import java.util.Arrays;[m
+ import java.util.Collections;[m
+ import java.util.List;[m
+ [m
+[36m@@ -26,7 +25,9 @@[m [mpublic class Utils {[m
+         } else {[m
+             List<T> list = new ArrayList<>();[m
+             list.add(head);[m
+[31m-            list.addAll(Arrays.asList(tail));[m
+[32m+[m[32m            for (T element : tail) {[m
+[32m+[m[32m                list.add(element);[m
+[32m+[m[32m            }[m
+             return list;[m
+         }[m
+     }[m
+[1mdiff --git a/parser/src/main/java/module-info.java b/parser/src/main/java/module-info.java[m
+[1mdeleted file mode 100644[m
+[1mindex 35b26b2..0000000[m
+[1m--- a/parser/src/main/java/module-info.java[m
+[1m+++ /dev/null[m
+[36m@@ -1,14 +0,0 @@[m
+[31m-module io.lindstrom.mpd {[m
+[31m-    requires com.fasterxml.jackson.dataformat.xml;[m
+[31m-    requires jackson.annotations;[m
+[31m-    requires com.fasterxml.jackson.databind;[m
+[31m-    requires com.fasterxml.jackson.core;[m
+[31m-    requires woodstox.core;[m
+[31m-    requires stax2.api;[m
+[31m-    requires java.xml;[m
+[31m-[m
+[31m-    exports io.lindstrom.mpd;[m
+[31m-    exports io.lindstrom.mpd.data;[m
+[31m-    exports io.lindstrom.mpd.data.descriptor;[m
+[31m-    exports io.lindstrom.mpd.data.descriptor.protection;[m
+[31m-}[m
+\ No newline at end of file[m
+[1mdiff --git a/validator/build.gradle b/validator/build.gradle[m
+[1mindex 2658969..4172fee 100644[m
+[1m--- a/validator/build.gradle[m
+[1m+++ b/validator/build.gradle[m
+[36m@@ -6,7 +6,7 @@[m [mapply plugin: 'java'[m
+ ext.moduleName = 'io.lindstrom.mpd.validator'[m
+ [m
+ [m
+[31m-sourceCompatibility = 10[m
+[32m+[m[32msourceCompatibility = 8[m
+ [m
+ repositories {[m
+     mavenCentral()[m

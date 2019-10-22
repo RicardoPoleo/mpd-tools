@@ -1,33 +1,36 @@
 package io.lindstrom.mpd.data;
 
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
-
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlElement;
 import java.util.Objects;
 
 public class SegmentBase {
-    @JacksonXmlProperty(localName = "Initialization", namespace = MPD.NAMESPACE)
+    @XmlElement(name = "Initialization", namespace = MPD.NAMESPACE)
     private final URLType initialization;
 
-    @JacksonXmlProperty(localName = "RepresentationIndex", namespace = MPD.NAMESPACE)
+    @XmlElement(name = "RepresentationIndex", namespace = MPD.NAMESPACE)
     private final URLType representationIndex;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "timescale")
     private final Long timescale;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "presentationTimeOffset")
     private final Long presentationTimeOffset;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "indexRange")
     private final String indexRange;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "indexRangeExact")
     private final Boolean indexRangeExact;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "availabilityTimeOffset")
     private final Double availabilityTimeOffset;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "availabilityTimeComplete")
     private final Boolean availabilityTimeComplete;
+
+    @XmlAttribute(name = "presentationDuration")
+    private final String presentationDuration;
 
     protected SegmentBase(URLType initialization, URLType representationIndex, Long timescale, Long presentationTimeOffset, String indexRange, Boolean indexRangeExact, Double availabilityTimeOffset, Boolean availabilityTimeComplete) {
         this.initialization = initialization;
@@ -38,6 +41,22 @@ public class SegmentBase {
         this.indexRangeExact = indexRangeExact;
         this.availabilityTimeOffset = availabilityTimeOffset;
         this.availabilityTimeComplete = availabilityTimeComplete;
+        this.presentationDuration = null;
+    }
+
+    public SegmentBase(URLType initialization, URLType representationIndex, Long timescale,
+        Long presentationTimeOffset, String indexRange, Boolean indexRangeExact,
+        Double availabilityTimeOffset, Boolean availabilityTimeComplete,
+        String presentationDuration) {
+        this.initialization = initialization;
+        this.representationIndex = representationIndex;
+        this.timescale = timescale;
+        this.presentationTimeOffset = presentationTimeOffset;
+        this.indexRange = indexRange;
+        this.indexRangeExact = indexRangeExact;
+        this.availabilityTimeOffset = availabilityTimeOffset;
+        this.availabilityTimeComplete = availabilityTimeComplete;
+        this.presentationDuration = presentationDuration;
     }
 
     @SuppressWarnings("unused")
@@ -50,6 +69,7 @@ public class SegmentBase {
         this.indexRangeExact = null;
         this.availabilityTimeOffset = null;
         this.availabilityTimeComplete = null;
+        this.presentationDuration = null;
     }
 
     public URLType getInitialization() {
@@ -82,6 +102,10 @@ public class SegmentBase {
 
     public Boolean getAvailabilityTimeComplete() {
         return availabilityTimeComplete;
+    }
+
+    public String getPresentationDuration() {
+        return presentationDuration;
     }
 
     @Override
@@ -132,7 +156,7 @@ public class SegmentBase {
                 .withAvailabilityTimeOffset(availabilityTimeOffset)
                 .withAvailabilityTimeComplete(availabilityTimeComplete);
     }
-
+    
     static abstract class AbstractBuilder<T> {
         URLType initialization;
         URLType representationIndex;
@@ -182,12 +206,8 @@ public class SegmentBase {
             this.availabilityTimeComplete = availabilityTimeComplete;
             return getThis();
         }
-
+        
         abstract T getThis();
-    }
-
-    public static Builder builder() {
-        return new Builder();
     }
 
     public static class Builder extends AbstractBuilder<Builder> {

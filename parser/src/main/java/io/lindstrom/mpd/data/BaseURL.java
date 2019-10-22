@@ -1,25 +1,30 @@
 package io.lindstrom.mpd.data;
 
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlText;
-
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlValue;
 import java.util.Objects;
 
 public class BaseURL {
-    @JacksonXmlText
+    @XmlValue
     private final String value;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "serviceLocation")
     private final String serviceLocation;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "byteRange")
     private final String byteRange;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "availabilityTimeOffset")
     private final Double availabilityTimeOffset;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "availabilityTimeComplete")
     private final Boolean availabilityTimeComplete;
+
+    @XmlAttribute(name = "priority")
+    private final int priority;
+
+    @XmlAttribute(name= "weight")
+    private final int weight;
 
     @SuppressWarnings("unused")
     private BaseURL() {
@@ -28,6 +33,8 @@ public class BaseURL {
         this.byteRange = null;
         this.availabilityTimeOffset = null;
         this.availabilityTimeComplete = null;
+        this.priority = 1;
+        this.weight = 1;
     }
 
     @SuppressWarnings("unused")
@@ -37,14 +44,26 @@ public class BaseURL {
         this.byteRange = null;
         this.availabilityTimeOffset = null;
         this.availabilityTimeComplete = null;
+        this.priority = 1;
+        this.weight = 1;
     }
 
-    private BaseURL(String value, String serviceLocation, String byteRange, Double availabilityTimeOffset, Boolean availabilityTimeComplete) {
+    private BaseURL(String value, String serviceLocation, String byteRange, Double availabilityTimeOffset, Boolean availabilityTimeComplete, int priority, int weight) {
         this.value = value;
         this.serviceLocation = serviceLocation;
         this.byteRange = byteRange;
         this.availabilityTimeOffset = availabilityTimeOffset;
         this.availabilityTimeComplete = availabilityTimeComplete;
+        this.priority = priority;
+        this.weight = weight;
+    }
+
+    public int getWeight() {
+        return weight;
+    }
+
+    public int getPriority() {
+        return priority;
     }
 
     public String getValue() {
@@ -92,6 +111,8 @@ public class BaseURL {
                 ", byteRange='" + byteRange + '\'' +
                 ", availabilityTimeOffset=" + availabilityTimeOffset +
                 ", availabilityTimeComplete=" + availabilityTimeComplete +
+                ", priority=" + priority +
+                ", weight=" + weight +
                 '}';
     }
 
@@ -101,11 +122,8 @@ public class BaseURL {
                 .withServiceLocation(serviceLocation)
                 .withByteRange(byteRange)
                 .withAvailabilityTimeOffset(availabilityTimeOffset)
-                .withAvailabilityTimeComplete(availabilityTimeComplete);
-    }
-
-    public static Builder builder() {
-        return new Builder();
+                .withAvailabilityTimeComplete(availabilityTimeComplete)
+                .withPriority(priority);
     }
 
     public static class Builder {
@@ -114,34 +132,46 @@ public class BaseURL {
         private String byteRange;
         private Double availabilityTimeOffset;
         private Boolean availabilityTimeComplete;
+        private int priority;
+        private int weight;
 
-        public Builder withValue(String value) {
+        private Builder withValue(String value) {
             this.value = value;
             return this;
         }
 
-        public Builder withServiceLocation(String serviceLocation) {
+        private Builder withServiceLocation(String serviceLocation) {
             this.serviceLocation = serviceLocation;
             return this;
         }
 
-        public Builder withByteRange(String byteRange) {
+        private Builder withByteRange(String byteRange) {
             this.byteRange = byteRange;
             return this;
         }
 
-        public Builder withAvailabilityTimeOffset(Double availabilityTimeOffset) {
+        private Builder withAvailabilityTimeOffset(Double availabilityTimeOffset) {
             this.availabilityTimeOffset = availabilityTimeOffset;
             return this;
         }
 
-        public Builder withAvailabilityTimeComplete(Boolean availabilityTimeComplete) {
+        private Builder withAvailabilityTimeComplete(Boolean availabilityTimeComplete) {
             this.availabilityTimeComplete = availabilityTimeComplete;
             return this;
         }
 
+        private Builder withPriority(int priority) {
+            this.priority = priority;
+            return this;
+        }
+
+        private Builder withWeight(int weight) {
+            this.weight = weight;
+            return this;
+        }
+
         public BaseURL build() {
-            return new BaseURL(value, serviceLocation, byteRange, availabilityTimeOffset, availabilityTimeComplete);
+            return new BaseURL(value, serviceLocation, byteRange, availabilityTimeOffset, availabilityTimeComplete, priority, weight);
         }
     }
 }

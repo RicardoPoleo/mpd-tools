@@ -1,21 +1,20 @@
 package io.lindstrom.mpd.data;
 
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
-
+import javax.xml.bind.annotation.XmlAttribute;
 import java.util.Objects;
 
 
 public class SegmentURL {
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "media")
     private final String media;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "mediaRange")
     private final String mediaRange;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "index")
     private final String index;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "indexRange")
     private final String indexRange;
 
     private SegmentURL(String media, String mediaRange, String index, String indexRange) {
@@ -81,10 +80,6 @@ public class SegmentURL {
                 .withMediaRange(mediaRange)
                 .withIndex(index)
                 .withIndexRange(indexRange);
-    }
-
-    public static Builder builder() {
-        return new Builder();
     }
 
     public static class Builder {

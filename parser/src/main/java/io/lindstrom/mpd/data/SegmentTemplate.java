@@ -1,16 +1,16 @@
 package io.lindstrom.mpd.data;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 import io.lindstrom.mpd.support.Utils;
 
-import java.util.Arrays;
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlElementWrapper;
+import javax.xml.bind.annotation.XmlType;
 import java.util.List;
 import java.util.Objects;
 
-@JsonPropertyOrder({
+@XmlType(propOrder = {
         "initialization",
         "media",
         "startNumber",
@@ -23,54 +23,54 @@ import java.util.Objects;
         "BitstreamSwitching"
 })
 public class SegmentTemplate {
-    @JacksonXmlProperty(localName = "S", namespace = MPD.NAMESPACE)
-    @JacksonXmlElementWrapper(localName = "SegmentTimeline", namespace = MPD.NAMESPACE)
+    @XmlElement(name = "S", namespace = MPD.NAMESPACE)
+    @XmlElementWrapper(name = "SegmentTimeline", namespace = MPD.NAMESPACE)
     @JsonInclude(value = JsonInclude.Include.NON_EMPTY)
     private final List<Segment> segmentTimeline;
 
-    @JacksonXmlProperty(localName = "BitstreamSwitching", namespace = MPD.NAMESPACE)
+    @XmlElement(name = "BitstreamSwitching", namespace = MPD.NAMESPACE)
     private final URLType bitstreamswitchingElement;
 
-    @JacksonXmlProperty(localName = "Initialization", namespace = MPD.NAMESPACE)
+    @XmlElement(name = "Initialization", namespace = MPD.NAMESPACE)
     private final URLType initializationElement;
 
-    @JacksonXmlProperty(localName = "RepresentationIndex", namespace = MPD.NAMESPACE)
+    @XmlElement(name = "RepresentationIndex", namespace = MPD.NAMESPACE)
     private final URLType representationIndex;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "media")
     private final String media;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "index")
     private final String index;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "initialization")
     private final String initialization;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "bitstreamSwitching")
     private final String bitstreamSwitching;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "duration")
     private final Long duration;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "startNumber")
     private final Long startNumber;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "timescale")
     private final Long timescale;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "presentationTimeOffset")
     private final Long presentationTimeOffset;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "indexRange")
     private final String indexRange;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "indexRangeExact")
     private final Boolean indexRangeExact;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "availabilityTimeOffset")
     private final Double availabilityTimeOffset;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "availabilityTimeComplete")
     private final Boolean availabilityTimeComplete;
 
     private SegmentTemplate(List<Segment> segmentTimeline, URLType bitstreamswitchingElement, URLType initializationElement, URLType representationIndex, String media, String index, String initialization, String bitstreamSwitching, Long duration, Long startNumber, Long timescale, Long presentationTimeOffset, String indexRange, Boolean indexRangeExact, Double availabilityTimeOffset, Boolean availabilityTimeComplete) {
@@ -244,10 +244,7 @@ public class SegmentTemplate {
             .withIndexRangeExact(indexRangeExact)
             .withAvailabilityTimeOffset(availabilityTimeOffset)
             .withAvailabilityTimeComplete(availabilityTimeComplete);
-    }
 
-    public static Builder builder() {
-        return new Builder();
     }
 
     public static class Builder {
@@ -270,11 +267,6 @@ public class SegmentTemplate {
 
         public Builder withSegmentTimeline(List<Segment> segmentTimeline) {
             this.segmentTimeline = segmentTimeline;
-            return this;
-        }
-
-        public Builder withSegmentTimeline(Segment ...segment) {
-            this.segmentTimeline = Arrays.asList(segment);
             return this;
         }
 

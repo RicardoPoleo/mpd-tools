@@ -1,15 +1,16 @@
 package io.lindstrom.mpd.data;
 
-import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 import io.lindstrom.mpd.data.descriptor.Descriptor;
 import io.lindstrom.mpd.support.Utils;
 
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlType;
 import java.util.List;
 import java.util.Objects;
 
 
-@JsonPropertyOrder({
+@XmlType(propOrder = {
     "framePackings",
     "audioChannelConfigurations",
     "contentProtections",
@@ -18,64 +19,64 @@ import java.util.Objects;
     "inbandEventStreams"
 })
 public abstract class RepresentationBase {
-    @JacksonXmlProperty(localName = "FramePacking", namespace = MPD.NAMESPACE)
+    @XmlElement(name = "FramePacking", namespace = MPD.NAMESPACE)
     private final List<Descriptor> framePackings;
 
-    @JacksonXmlProperty(localName = "AudioChannelConfiguration", namespace = MPD.NAMESPACE)
+    @XmlElement(name = "AudioChannelConfiguration", namespace = MPD.NAMESPACE)
     private final List<Descriptor> audioChannelConfigurations;
 
-    @JacksonXmlProperty(localName = "ContentProtection", namespace = MPD.NAMESPACE)
+    @XmlElement(name = "ContentProtection", namespace = MPD.NAMESPACE)
     private final List<Descriptor> contentProtections;
 
-    @JacksonXmlProperty(localName = "EssentialProperty", namespace = MPD.NAMESPACE)
+    @XmlElement(name = "EssentialProperty", namespace = MPD.NAMESPACE)
     private final List<Descriptor> essentialProperties;
 
-    @JacksonXmlProperty(localName = "SupplementalProperty", namespace = MPD.NAMESPACE)
+    @XmlElement(name = "SupplementalProperty", namespace = MPD.NAMESPACE)
     private final List<Descriptor> supplementalProperties;
 
-    @JacksonXmlProperty(localName = "InbandEventStream", namespace = MPD.NAMESPACE)
+    @XmlElement(name = "InbandEventStream", namespace = MPD.NAMESPACE)
     private final List<EventStream> inbandEventStreams;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "profiles")
     private final String profiles;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "width")
     private final Long width;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "height")
     private final Long height;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "sar")
     private final Ratio sar;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "frameRate")
     private final FrameRate frameRate;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "audioSamplingRate")
     private final String audioSamplingRate;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "mimeType")
     private final String mimeType;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "segmentProfiles")
     private final String segmentProfiles;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "codecs")
     private final String codecs;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "maximumSAPPeriod")
     private final Double maximumSAPPeriod;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "startWithSAP")
     private final Long startWithSAP;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "maxPlayoutRate")
     private final Double maxPlayoutRate;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "codingDependency")
     private final Boolean codingDependency;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "scanType")
     private final VideoScanType scanType;
 
     RepresentationBase(List<Descriptor> framePackings, List<Descriptor> audioChannelConfigurations, List<Descriptor> contentProtections, List<Descriptor> essentialProperties, List<Descriptor> supplementalProperties, List<EventStream> inbandEventStreams, String profiles, Long width, Long height, Ratio sar, FrameRate frameRate, String audioSamplingRate, String mimeType, String segmentProfiles, String codecs, Double maximumSAPPeriod, Long startWithSAP, Double maxPlayoutRate, Boolean codingDependency, VideoScanType scanType) {

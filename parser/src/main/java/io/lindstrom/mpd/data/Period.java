@@ -1,15 +1,16 @@
 package io.lindstrom.mpd.data;
 
-import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 import io.lindstrom.mpd.data.descriptor.Descriptor;
 import io.lindstrom.mpd.support.Utils;
 
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlType;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
 
-@JsonPropertyOrder({
+@XmlType(propOrder = {
         "id",
 
         "baseURLs",
@@ -23,49 +24,49 @@ import java.util.Objects;
         "supplementalProperties"
 })
 public class Period {
-    @JacksonXmlProperty(localName = "BaseURL", namespace = MPD.NAMESPACE)
+    @XmlElement(name = "BaseURL", namespace = MPD.NAMESPACE)
     private final List<BaseURL> baseURLs;
 
-    @JacksonXmlProperty(localName = "SegmentBase", namespace = MPD.NAMESPACE)
+    @XmlElement(name = "SegmentBase", namespace = MPD.NAMESPACE)
     private final SegmentBase segmentBase;
 
-    @JacksonXmlProperty(localName = "SegmentList", namespace = MPD.NAMESPACE)
+    @XmlElement(name = "SegmentList", namespace = MPD.NAMESPACE)
     private final SegmentList segmentList;
 
-    @JacksonXmlProperty(localName = "SegmentTemplate", namespace = MPD.NAMESPACE)
+    @XmlElement(name = "SegmentTemplate", namespace = MPD.NAMESPACE)
     private final SegmentTemplate segmentTemplate;
 
-    @JacksonXmlProperty(localName = "AssetIdentifier", namespace = MPD.NAMESPACE)
+    @XmlElement(name = "AssetIdentifier", namespace = MPD.NAMESPACE)
     private final Descriptor assetIdentifier;
 
-    @JacksonXmlProperty(localName = "EventStream", namespace = MPD.NAMESPACE)
+    @XmlElement(name = "EventStream", namespace = MPD.NAMESPACE)
     private final List<EventStream> eventStreams;
 
-    @JacksonXmlProperty(localName = "AdaptationSet", namespace = MPD.NAMESPACE)
+    @XmlElement(name = "AdaptationSet", namespace = MPD.NAMESPACE)
     private final List<AdaptationSet> adaptationSets;
 
-    @JacksonXmlProperty(localName = "Subset", namespace = MPD.NAMESPACE)
+    @XmlElement(name = "Subset", namespace = MPD.NAMESPACE)
     private final List<Subset> subsets;
 
-    @JacksonXmlProperty(localName = "SupplementalProperty", namespace = MPD.NAMESPACE)
+    @XmlElement(name = "SupplementalProperty", namespace = MPD.NAMESPACE)
     private final List<Descriptor> supplementalProperties;
 
-    @JacksonXmlProperty(isAttribute = true, namespace = "http://www.w3.org/1999/xlink")
+    @XmlAttribute(name = "href", namespace = "http://www.w3.org/1999/xlink")
     private final String href;
 
-    @JacksonXmlProperty(isAttribute = true, namespace = "http://www.w3.org/1999/xlink")
+    @XmlAttribute(name = "actuate", namespace = "http://www.w3.org/1999/xlink")
     private final ActuateType actuate;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "id")
     private final String id;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "start")
     private final Duration start;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "duration")
     private final Duration duration;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "bitstreamSwitching")
     private final Boolean bitstreamSwitching;
 
     private Period(List<BaseURL> baseURLs, SegmentBase segmentBase, SegmentList segmentList, SegmentTemplate segmentTemplate, Descriptor assetIdentifier, List<EventStream> eventStreams, List<AdaptationSet> adaptationSets, List<Subset> subsets, List<Descriptor> supplementalProperties, String href, ActuateType actuate, String id, Duration start, Duration duration, Boolean bitstreamSwitching) {
@@ -230,10 +231,6 @@ public class Period {
                 .withStart(start)
                 .withDuration(duration)
                 .withBitstreamSwitching(bitstreamSwitching);
-    }
-
-    public static Builder builder() {
-        return new Builder();
     }
 
     public static class Builder {

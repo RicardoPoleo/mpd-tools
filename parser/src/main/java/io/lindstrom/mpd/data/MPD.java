@@ -1,18 +1,22 @@
 package io.lindstrom.mpd.data;
 
-import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.lindstrom.mpd.data.descriptor.Descriptor;
+import io.lindstrom.mpd.data.descriptor.Scope;
+import io.lindstrom.mpd.data.descriptor.ServiceDescription;
 import io.lindstrom.mpd.support.Utils;
 
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlType;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
-@JsonPropertyOrder({
+@XmlType(propOrder = {
     "programInformations",
     "baseURLs",
     "locations",
@@ -22,86 +26,83 @@ import java.util.Objects;
     "supplementalProperties",
     "utcTimings"
 })
-@JacksonXmlRootElement(localName = "MPD", namespace = io.lindstrom.mpd.data.MPD.NAMESPACE)
+@XmlRootElement(name = "MPD", namespace = io.lindstrom.mpd.data.MPD.NAMESPACE)
 public class MPD {
-    static final String NAMESPACE = "urn:mpeg:dash:schema:mpd:2011";
+    public static final String NAMESPACE = "urn:mpeg:dash:schema:mpd:2011";
 
-    @JacksonXmlProperty(localName = "ProgramInformation", namespace = NAMESPACE)
+    @XmlElement(name = "ProgramInformation", namespace = NAMESPACE)
     private final List<ProgramInformation> programInformations;
 
-    @JacksonXmlProperty(localName = "BaseURL", namespace = NAMESPACE)
+    @XmlElement(name = "BaseURL", namespace = NAMESPACE)
     private final List<BaseURL> baseURLs;
 
-    @JacksonXmlProperty(localName = "Location", namespace = NAMESPACE)
+    @XmlElement(name = "Location", namespace = NAMESPACE)
     private final List<String> locations;
 
-    @JacksonXmlProperty(localName = "Period", namespace = NAMESPACE)
+    @XmlElement(name = "Period", required = true, namespace = NAMESPACE)
     private final List<Period> periods;
 
-    @JacksonXmlProperty(localName = "Metrics", namespace = NAMESPACE)
+    @XmlElement(name = "Metrics", namespace = NAMESPACE)
     private final List<Metrics> metrics;
 
-    @JacksonXmlProperty(localName = "EssentialProperty", namespace = NAMESPACE)
+    @XmlElement(name = "EssentialProperty", namespace = NAMESPACE)
     private final List<Descriptor> essentialProperties;
 
-    @JacksonXmlProperty(localName = "SupplementalProperty", namespace = NAMESPACE)
+    @XmlElement(name = "SupplementalProperty", namespace = NAMESPACE)
     private final List<Descriptor> supplementalProperties;
 
-    @JacksonXmlProperty(localName = "UTCTiming", namespace = NAMESPACE)
+    @XmlElement(name = "UTCTiming", namespace = NAMESPACE)
     private final List<UTCTiming> utcTimings;
 
-    @JacksonXmlProperty(isAttribute = true, namespace = "http://www.w3.org/2001/XMLSchema-instance")
-    private final String schemaLocation;
-
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "id")
     private final String id;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "profiles", required = true)
     private final Profiles profiles;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "type")
     private final PresentationType type;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "availabilityStartTime")
     private final OffsetDateTime availabilityStartTime;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "availabilityEndTime")
     private final OffsetDateTime availabilityEndTime;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "publishTime")
     private final OffsetDateTime publishTime;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "mediaPresentationDuration")
     private final Duration mediaPresentationDuration;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "minimumUpdatePeriod")
     private final Duration minimumUpdatePeriod;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "minBufferTime", required = true)
     private final Duration minBufferTime;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "timeShiftBufferDepth")
     private final Duration timeShiftBufferDepth;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "suggestedPresentationDelay")
     private final Duration suggestedPresentationDelay;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "maxSegmentDuration")
     private final Duration maxSegmentDuration;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "maxSubsegmentDuration")
     private final Duration maxSubsegmentDuration;
 
+    @XmlAttribute(name = "ServiceDescription")
+    private final ServiceDescription serviceDescription;
 
+    @XmlAttribute(name = "Scope")
+    private final Scope scope;
 
-    private MPD(String schemaLocation, List<ProgramInformation> programInformations, List<BaseURL> baseURLs, List<String> locations,
-                List<Period> periods, List<Metrics> metrics, List<Descriptor> essentialProperties,
-                List<Descriptor> supplementalProperties, List<UTCTiming> utcTimings, String id,
-                Profiles profiles, PresentationType type, OffsetDateTime availabilityStartTime,
-                OffsetDateTime availabilityEndTime, OffsetDateTime publishTime, Duration mediaPresentationDuration,
-                Duration minimumUpdatePeriod, Duration minBufferTime, Duration timeShiftBufferDepth,
-                Duration suggestedPresentationDelay, Duration maxSegmentDuration, Duration maxSubsegmentDuration) {
-        this.schemaLocation = schemaLocation;
+    @XmlAttribute(namespace = "http://www.w3.org/2001/XMLSchema-instance")
+    private final String schemaLocation;
+
+    private MPD(List<ProgramInformation> programInformations, List<BaseURL> baseURLs, List<String> locations, List<Period> periods, List<Metrics> metrics, List<Descriptor> essentialProperties, List<Descriptor> supplementalProperties, List<UTCTiming> utcTimings, String id, Profiles profiles, PresentationType type, OffsetDateTime availabilityStartTime, OffsetDateTime availabilityEndTime, OffsetDateTime publishTime, Duration mediaPresentationDuration, Duration minimumUpdatePeriod, Duration minBufferTime, Duration timeShiftBufferDepth, Duration suggestedPresentationDelay, Duration maxSegmentDuration, Duration maxSubsegmentDuration, String schemaLocation, ServiceDescription serviceDescription, Scope scope) {
         this.programInformations = programInformations;
         this.baseURLs = baseURLs;
         this.locations = locations;
@@ -123,6 +124,9 @@ public class MPD {
         this.suggestedPresentationDelay = suggestedPresentationDelay;
         this.maxSegmentDuration = maxSegmentDuration;
         this.maxSubsegmentDuration = maxSubsegmentDuration;
+        this.schemaLocation = schemaLocation;
+        this.serviceDescription = serviceDescription;
+        this.scope = scope;
     }
 
     @SuppressWarnings("unused")
@@ -149,6 +153,8 @@ public class MPD {
         this.maxSegmentDuration = null;
         this.maxSubsegmentDuration = null;
         this.schemaLocation = null;
+        this.serviceDescription = null;
+        this.scope = null;
     }
 
     public List<ProgramInformation> getProgramInformations() {
@@ -187,6 +193,7 @@ public class MPD {
         return id;
     }
 
+    @JsonIgnore
     public List<Profile> getProfiles() {
         if (profiles == null) {
             return Collections.emptyList();
@@ -195,6 +202,7 @@ public class MPD {
         }
     }
 
+    @JsonIgnore
     public List<String> getInteroperabilityPointsAndExtensions() {
         if (profiles == null) {
             return Collections.emptyList();
@@ -249,6 +257,18 @@ public class MPD {
 
     public String getSchemaLocation() {
         return schemaLocation;
+    }
+
+    public static String getNAMESPACE() {
+        return NAMESPACE;
+    }
+
+    public ServiceDescription getServiceDescription() {
+        return serviceDescription;
+    }
+
+    public Scope getScope() {
+        return scope;
     }
 
     @Override
@@ -310,6 +330,8 @@ public class MPD {
                 ", maxSegmentDuration=" + maxSegmentDuration +
                 ", maxSubsegmentDuration=" + maxSubsegmentDuration +
                 ", schemaLocation='" + schemaLocation + '\'' +
+                ", serviceDescription='" + serviceDescription + '\'' +
+                ", scope='" + scope + '\'' +
                 '}';
     }
 
@@ -336,11 +358,9 @@ public class MPD {
                 .withSuggestedPresentationDelay(suggestedPresentationDelay)
                 .withMaxSegmentDuration(maxSegmentDuration)
                 .withMaxSubsegmentDuration(maxSubsegmentDuration)
-                .withSchemaLocation(schemaLocation);
-    }
-
-    public static Builder builder() {
-        return new Builder();
+                .withSchemaLocation(schemaLocation)
+                .withServiceDescription(serviceDescription)
+                .withScope(scope);
     }
 
     public static class Builder {
@@ -368,6 +388,8 @@ public class MPD {
         private Duration maxSegmentDuration;
         private Duration maxSubsegmentDuration;
         private String schemaLocation;
+        private ServiceDescription serviceDescription;
+        private Scope scope;
 
         public Builder() {
             this.schemaLocation = DEFAULT_SCHEMA_LOCATION;
@@ -515,8 +537,18 @@ public class MPD {
             return this;
         }
 
+        public Builder withServiceDescription(ServiceDescription serviceDescription) {
+            this.serviceDescription = serviceDescription;
+            return this;
+        }
+
+        public Builder withScope(Scope scope) {
+            this.scope = scope;
+            return this;
+        }
+
         public MPD build() {
-            return new MPD(schemaLocation, programInformations, baseURLs, locations, periods, metrics, essentialProperties, supplementalProperties, utcTimings, id, profiles, type, availabilityStartTime, availabilityEndTime, publishTime, mediaPresentationDuration, minimumUpdatePeriod, minBufferTime, timeShiftBufferDepth, suggestedPresentationDelay, maxSegmentDuration, maxSubsegmentDuration);
+            return new MPD(programInformations, baseURLs, locations, periods, metrics, essentialProperties, supplementalProperties, utcTimings, id, profiles, type, availabilityStartTime, availabilityEndTime, publishTime, mediaPresentationDuration, minimumUpdatePeriod, minBufferTime, timeShiftBufferDepth, suggestedPresentationDelay, maxSegmentDuration, maxSubsegmentDuration, schemaLocation, serviceDescription, scope);
         }
     }
 }

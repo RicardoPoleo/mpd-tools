@@ -1,20 +1,19 @@
 package io.lindstrom.mpd.data;
 
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
-
+import javax.xml.bind.annotation.XmlAttribute;
 import java.util.Objects;
 
 public class Segment {
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "t")
     private final Long t;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "n")
     private final Long n;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "d", required = true)
     private final long d;
 
-    @JacksonXmlProperty(isAttribute = true)
+    @XmlAttribute(name = "r")
     private final Long r;
 
     private Segment(Long t, Long n, long d, Long r) {
@@ -80,18 +79,6 @@ public class Segment {
                 .withN(n)
                 .withD(d)
                 .withR(r);
-    }
-
-    public static Segment of(long t, long d, long r) {
-        return new Segment(t, null, d, r);
-    }
-
-    public static Segment of(long t, long d) {
-        return new Segment(t, null, d, null);
-    }
-
-    public static Builder builder() {
-        return new Builder();
     }
 
     public static class Builder {
